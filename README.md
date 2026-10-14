@@ -46,6 +46,36 @@ Rendering and slab construction run in the embedded editor. The plugin has no
 standalone telemetry service. Files and explicitly sent selection context remain
 subject to the host application's own data handling.
 
+## Research use and citation
+
+If you use this plugin for research, including molecular/crystal structure
+editing or slab construction, please cite the CatGo paper:
+
+Liu, G.; Ma, X.; Zhang, L.; Pascasio, J.; Yang, J.; Chen, Y.; Li, W.-L.
+**CatGo: Bridging CLI coding agents with interactive structure and workflow management for computational chemistry.**
+*Digital Discovery* **2026**, *5*(9), 3825–3849.
+DOI: [10.1039/D6DD00273K](https://doi.org/10.1039/D6DD00273K).
+
+Copy the BibTeX below, download [CITATION.bib](CITATION.bib), or use GitHub's
+**Cite this repository** entry. [CITATION.cff](CITATION.cff) sets the paper as the
+preferred citation.
+
+```bibtex
+@article{Liu2026CatGo,
+  author  = {Liu, Guangsheng and Ma, Xiao and Zhang, Leshen and
+             Pascasio, Jenedith and Yang, Jonathan and Chen, Yuxiang and
+             Li, Wan-Lu},
+  title   = {{CatGo}: Bridging {CLI} coding agents with interactive structure and workflow management for computational chemistry},
+  journal = {Digital Discovery},
+  year    = {2026},
+  volume  = {5},
+  number  = {9},
+  pages   = {3825--3849},
+  doi     = {10.1039/D6DD00273K},
+  url     = {https://doi.org/10.1039/D6DD00273K}
+}
+```
+
 ## Update and remove
 
 ```sh

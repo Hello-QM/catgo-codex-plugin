@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: If CatGo contributes to your work, please acknowledge and cite it as described below. This request is not an additional condition of AGPL-3.0-or-later.
+version: 0.2.8
+title: CatGo Structure Editor for Codex
+license: AGPL-3.0-or-later
+license-url: https://github.com/Hello-QM/catgo-codex-plugin/blob/main/LICENSE
+authors:
+- family-names: Li
+  given-names: Wanlu
+  affiliation: University of California, San Diego
+  email: gul026@ucsd.edu
+repository-code: https://github.com/Hello-QM/catgo-codex-plugin
+type: software
+url: https://github.com/Hello-QM/catgo-codex-plugin
+preferred-citation:
+  type: article
+  title: 'CatGo: Bridging CLI coding agents with interactive structure and workflow management for computational chemistry'
+  authors:
+  - family-names: Liu
+    given-names: Guangsheng
+  - family-names: Ma
+    given-names: Xiao
+  - family-names: Zhang
+    given-names: Leshen
+  - family-names: Pascasio
+    given-names: Jenedith
+  - family-names: Yang
+    given-names: Jonathan
+  - family-names: Chen
+    given-names: Yuxiang
+  - family-names: Li
+    given-names: Wan-Lu
+  year: 2026
+  journal: Digital Discovery
+  volume: '5'
+  issue: '9'
+  start: '3825'
+  end: '3849'
+  doi: 10.1039/D6DD00273K
+  url: https://doi.org/10.1039/D6DD00273K

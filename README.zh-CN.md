@@ -31,6 +31,36 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
   conventional cell 和真空层。结果是几何切割结构，不包含弛豫或能量计算。
 - 点击 **Send selection** 才把选中的原子信息发送到模型上下文。
 
+## 论文与引用方式
+
+如果你使用本插件进行科研，例如分子/晶体结构编辑或 slab 构建，请在相关论文
+或科研成果中引用我们的 CatGo 论文：
+
+Liu, G.; Ma, X.; Zhang, L.; Pascasio, J.; Yang, J.; Chen, Y.; Li, W.-L.
+**CatGo: Bridging CLI coding agents with interactive structure and workflow management for computational chemistry.**
+*Digital Discovery* **2026**, *5*(9), 3825–3849.
+DOI: [10.1039/D6DD00273K](https://doi.org/10.1039/D6DD00273K).
+
+可直接复制以下 BibTeX，也可下载 [CITATION.bib](CITATION.bib)，或点击 GitHub
+仓库的 **Cite this repository** 引用入口。[CITATION.cff](CITATION.cff) 已将这篇
+论文设置为首选引用。
+
+```bibtex
+@article{Liu2026CatGo,
+  author  = {Liu, Guangsheng and Ma, Xiao and Zhang, Leshen and
+             Pascasio, Jenedith and Yang, Jonathan and Chen, Yuxiang and
+             Li, Wan-Lu},
+  title   = {{CatGo}: Bridging {CLI} coding agents with interactive structure and workflow management for computational chemistry},
+  journal = {Digital Discovery},
+  year    = {2026},
+  volume  = {5},
+  number  = {9},
+  pages   = {3825--3849},
+  doi     = {10.1039/D6DD00273K},
+  url     = {https://doi.org/10.1039/D6DD00273K}
+}
+```
+
 ## 更新
 
 ```sh
