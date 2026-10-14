@@ -9,6 +9,7 @@ From the repository root:
 npm ci --ignore-scripts --prefix vendor/catgo
 npm ci --prefix plugins/catgo-editor/ui
 node scripts/apply-vendor-patches.mjs
+python3 scripts/sync-codex-compat.py
 node plugins/catgo-editor/scripts/build-ui.mjs
 python3 scripts/check-package.py
 python3 -m unittest discover -s plugins/catgo-editor/tests -v
@@ -32,6 +33,12 @@ CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS=1 node plugins/catgo-editor/tests/editor.b
 The variable syntax above is for POSIX shells. Tests use Playwright's installed
 Chromium by default; `CATGO_TEST_BROWSER` can select an existing browser executable.
 Every test owns and closes its local HTTP server and browser.
+
+The root `plugin.json` and `mcp.json` are canonical. After metadata changes, run
+`python3 scripts/sync-codex-compat.py` to regenerate the legacy Codex overlay
+and `.mcp.json`; the package check rejects stale compatibility files.
+`python3 scripts/check-codex-install.py --codex /path/to/codex` checks a real
+CLI's marketplace install and MCP discovery in a disposable `CODEX_HOME`.
 
 The default build uses only `vendor/catgo/`. For a maintainer-reviewed replacement
 checkout, set `CATGO_SOURCE_ROOT` explicitly. The 17 slab source fingerprints must

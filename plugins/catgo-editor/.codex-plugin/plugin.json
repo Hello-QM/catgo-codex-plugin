@@ -1,0 +1,28 @@
+{
+  "name": "catgo-editor",
+  "version": "0.2.9",
+  "description": "A CatGo structure file editor with host-managed reads and version-checked saves.",
+  "author": {
+    "name": "CatGo"
+  },
+  "repository": "https://github.com/Hello-QM/catgo-codex-plugin",
+  "license": "AGPL-3.0-or-later",
+  "interface": {
+    "displayName": "CatGo Structure Editor",
+    "shortDescription": "Edit structures beside chat",
+    "longDescription": "Open CIF, XYZ and POSCAR files in a dedicated CatGo editor. Edit atomic coordinates and use undo/redo with version-checked saves through the host file interface.",
+    "developerName": "CatGo",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": "Open the CatGo structure editor beside this chat.",
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg",
+    "websiteURL": "https://github.com/Hello-QM/catgo-codex-plugin",
+    "supportURL": "https://github.com/Hello-QM/catgo-codex-plugin/issues"
+  },
+  "mcpServers": "./.mcp.json"
+}

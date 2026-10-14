@@ -18,6 +18,10 @@ codex plugin add catgo-editor@catgo
 `.poscar`、`.vasp` 文件。无扩展名的 `POSCAR`、`CONTCAR` 可以通过编辑器的
 **Open** 导入。测试结构见 [examples/](examples/)。
 
+如果此前安装报 `missing plugin.json`，先运行
+`codex plugin marketplace upgrade catgo` 刷新市场，再重新安装。
+0.2.9 已补齐旧版 Codex 所需的兼容清单和 MCP 配置。
+
 Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境运行。
 当前配置调用 `python3`，只有 `python` 或 `py` 命令还不够。
 如不能安装或画面为空，见 [故障排查](docs/troubleshooting.md)。

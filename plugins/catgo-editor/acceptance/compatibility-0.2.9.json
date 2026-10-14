@@ -1,0 +1,41 @@
+{
+  "version": "0.2.9",
+  "reportedClient": {
+    "cli": "0.134.0",
+    "os": "Windows 11"
+  },
+  "baseline": {
+    "testedCli": [
+      "0.134.0",
+      "0.137.0"
+    ],
+    "testedPlatform": "linux",
+    "pluginVersion": "0.2.8",
+    "marketplaceAdd": "passed",
+    "pluginInstallError": "Error: missing plugin.json"
+  },
+  "fixed": {
+    "testedCli": [
+      "0.134.0",
+      "0.137.0",
+      "0.162.1"
+    ],
+    "testedPlatform": "linux",
+    "marketplaceAdd": true,
+    "pluginInstall": true,
+    "enabled": true,
+    "mcpDiscovery": [
+      "catgo-editor"
+    ],
+    "installedLegacyLauncherInitialize": true,
+    "fileOpenerDiscovered": true
+  },
+  "otherChecks": [
+    "runtime ZIP includes both manifests and MCP configurations",
+    "7 stdio/resource tests",
+    "9 document tests",
+    "official MCP SDK client",
+    "browser protocol harness: water pixels, edit, undo/redo, Save and conflict"
+  ],
+  "nativeCodexRenderingVerified": false
+}

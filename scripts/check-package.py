@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import runpy
 
 ROOT = Path(__file__).resolve().parents[1]
 catalog = json.loads((ROOT / '.agents/plugins/marketplace.json').read_text())
@@ -13,6 +14,10 @@ entry = catalog['plugins'][0]
 plugin = (ROOT / entry['source']['path']).resolve()
 assert plugin.is_relative_to(ROOT)
 manifest = json.loads((plugin / 'plugin.json').read_text())
+compatibility = runpy.run_path(str(ROOT / 'scripts/sync-codex-compat.py'))['compatibility_files']()
+for name, expected in compatibility.items():
+    assert json.loads((plugin / name).read_text(encoding='utf-8')) == expected, \
+        f'{name} is missing or stale; run python3 scripts/sync-codex-compat.py'
 assert manifest['name'] == entry['name'] == 'catgo-editor'
 assert re.fullmatch(r'\d+\.\d+\.\d+', manifest['version'])
 interface = manifest['extensions']['com.openai']['interface']

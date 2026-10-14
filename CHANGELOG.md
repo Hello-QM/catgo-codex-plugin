@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.9 — 2026-10-14
+
+- Add `.codex-plugin/plugin.json` and `.mcp.json` for Codex clients using the
+  legacy package layout. CLI 0.134.0 and 0.137.0 could add the marketplace but rejected
+  0.2.8 with `missing plugin.json` because it did not recognize root manifests.
+- Generate compatibility metadata from the portable files and check consistency
+  in CI. Include both layouts in the runtime ZIP.
+- Add isolated real-CLI installation and MCP discovery checks.
+
 ## 0.2.8 — 2026-10-13
 
 - Publish a standalone GitHub marketplace named `catgo`, with plugin identity

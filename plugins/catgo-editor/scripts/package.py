@@ -7,7 +7,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
 version = json.loads((ROOT / 'plugin.json').read_text())['version']
-names = ['plugin.json', 'mcp.json', 'server.py', 'README.md', 'LICENSE',
+names = ['plugin.json', 'mcp.json', '.codex-plugin/plugin.json', '.mcp.json',
+         'server.py', 'README.md', 'LICENSE',
          'CITATION.cff', 'THIRD_PARTY_NOTICES.md']
 files = [ROOT / name for name in names]
 for name in ['assets', 'third_party']:

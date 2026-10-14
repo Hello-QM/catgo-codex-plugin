@@ -1,5 +1,23 @@
 # Troubleshooting
 
+## Installation reports `missing plugin.json`
+
+Version 0.2.8 only included the portable root `plugin.json`. Older Codex clients,
+including CLI 0.134.0 and 0.137.0, look for `.codex-plugin/plugin.json` instead and can add
+the marketplace while failing to install the plugin. Version 0.2.9 includes
+both manifests and their MCP configurations.
+
+Refresh the marketplace snapshot, then install again:
+
+```sh
+codex plugin marketplace upgrade catgo
+codex plugin add catgo-editor@catgo
+```
+
+Refresh plugin connections or start a new chat. If the same error persists,
+check `codex --version` and `codex plugin marketplace list` to confirm which
+client and marketplace checkout are being used. Include those outputs in an issue.
+
 ## Plugin cannot start
 
 Run `python3 --version` and `codex plugin marketplace list`. The MCP configuration

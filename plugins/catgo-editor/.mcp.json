@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "catgo-editor": {
+      "command": "python3",
+      "args": [
+        "server.py"
+      ],
+      "cwd": "."
+    }
+  }
+}

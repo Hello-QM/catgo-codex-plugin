@@ -5,6 +5,25 @@ on:
 permissions:
   contents: read
 jobs:
+  installation:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        codex: ['0.134.0', '0.162.1']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: npm install --prefix .test-codex @openai/codex@${{ matrix.codex }}
+      - name: Provide the documented python3 launcher on Windows
+        if: runner.os == 'Windows'
+        run: python -c "import pathlib, shutil, sys; shutil.copyfile(sys.executable, pathlib.Path(sys.executable).with_name('python3.exe'))"
+      - run: python scripts/check-codex-install.py --npm-prefix .test-codex
   runtime:
     strategy:
       matrix:

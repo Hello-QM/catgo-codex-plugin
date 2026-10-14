@@ -24,6 +24,10 @@ Refresh plugin connections or start a new chat after installation. Open a
 For an extensionless `POSCAR`/`CONTCAR`, open the CatGo editor and use **Open**.
 Sample structures are in [examples/](examples/).
 
+If an earlier installation failed with `missing plugin.json`, refresh the cached
+marketplace with `codex plugin marketplace upgrade catgo`, then run the install
+command again. Version 0.2.9 includes both portable and legacy Codex manifests.
+
 For Windows, check that `python3 --version` runs from the environment that
 launches Codex before installing. The shipped launcher uses that command;
 `python` or `py` alone is insufficient. See [troubleshooting](docs/troubleshooting.md).
