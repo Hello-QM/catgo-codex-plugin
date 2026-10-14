@@ -1,0 +1,30 @@
+{
+  "name": "ferrox",
+  "type": "module",
+  "collaborators": [
+    "LRG <gul026@ucsd.edu>"
+  ],
+  "description": "High-performance structure matching for crystallographic data",
+  "version": "0.0.4",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hello-QM/catgo-LRG"
+  },
+  "files": [
+    "ferrox_bg.wasm",
+    "ferrox.js",
+    "ferrox.d.ts"
+  ],
+  "main": "ferrox.js",
+  "types": "ferrox.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "crystallography",
+    "materials-science",
+    "structure-matching"
+  ],
+  "private": true
+}

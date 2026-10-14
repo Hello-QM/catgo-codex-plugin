@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+*.pyc
+dist/
+target/
+plugins/catgo-editor/preview/
+plugins/catgo-editor/preview-build-sizes.json
+plugins/catgo-editor/build-inputs.json
+plugins/catgo-editor/build-dependencies.json
+plugins/catgo-editor/tests/document.bundle.*
+.env
+.env.*

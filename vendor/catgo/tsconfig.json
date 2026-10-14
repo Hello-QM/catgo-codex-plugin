@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "$lib": [
+        "src/lib"
+      ],
+      "$lib/*": [
+        "src/lib/*"
+      ]
+    },
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "Bundler"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "0.2.4",
+  "date": "2026-10-12",
+  "host": "Codex desktop app",
+  "installedAndEnabled": true,
+  "activeServerVersionVerified": true,
+  "nativeFileEntrypointVerified": true,
+  "nativeFileReadVerified": true,
+  "nativeStructureDisplayVerified": true,
+  "nativeDisplayEvidence": "User reported: 显示的是结构; earlier screenshot showed the file name and Saved · 3 atoms.",
+  "nativeCoordinateEditVerified": false,
+  "nativeSaveVerified": false,
+  "protocolEditUndoRedoSaveConflictTests": "passed",
+  "browserPixelRenderingTests": "passed, including narrow viewport and hidden WebGL constructor",
+  "upgradeAssetSnapshotRegression": "passed",
+  "publicMarketPublished": false
+}

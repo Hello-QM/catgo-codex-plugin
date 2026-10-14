@@ -1,0 +1,47 @@
+{
+  "version": "0.2.4",
+  "date": "2026-10-12",
+  "host": "isolated protocol test harness",
+  "source": "Existing IrO2_bulk_POSCAR plus synthetic triclinic inversion fixture",
+  "sourceUnmodified": true,
+  "modelTestsPassed": 9,
+  "cases": [
+    {
+      "file": "IrO2_bulk_test.poscar",
+      "atoms": 6,
+      "cellVolume": 64.48031649722306,
+      "rendered": true,
+      "coordinateEditUndoRedoSave": true,
+      "cellAndAtomCountPreserved": true,
+      "pageErrors": [],
+      "nativeHostVerified": false
+    },
+    {
+      "file": "IrO2_bulk_test.cif",
+      "atoms": 6,
+      "cellVolume": 64.48031534687335,
+      "rendered": true,
+      "coordinateEditUndoRedoSave": true,
+      "cellAndAtomCountPreserved": true,
+      "pageErrors": [],
+      "nativeHostVerified": false
+    },
+    {
+      "file": "triclinic_symmetry_test.cif",
+      "atoms": 2,
+      "cellVolume": 110.20033123326024,
+      "rendered": true,
+      "coordinateEditUndoRedoSave": true,
+      "cellAndAtomCountPreserved": true,
+      "pageErrors": [],
+      "nativeHostVerified": false
+    }
+  ],
+  "nativeHostConfirmation": {
+    "file": "IrO2_bulk_test.cif",
+    "displayVerified": true,
+    "atomCount": 6,
+    "evidence": "User reported: 晶胞和原子正常显示，6 atoms",
+    "nativeEditingAndSavingVerified": false
+  }
+}

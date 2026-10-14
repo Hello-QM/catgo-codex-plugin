@@ -1,0 +1,180 @@
+/** Provider IDs — SDK agents, API providers, and local (Ollama). */
+export type LLMProvider =
+  | `sdk-claude`
+  | `sdk-codex`
+  | `sdk-gemini`
+  | `antigravity`
+  | `openrouter`
+  | `agnes`
+  | `spark`
+  | `ernie`
+  | `grok`
+  | `copilot`
+  | `deepseek`
+  | `qwen`
+  | `kimi`
+  | `zhipu`
+  | `zai-coding`
+  | `gemini`
+  | `anthropic`
+  | `custom`
+  | `ollama`
+
+/** Provider mode: SDK agent bridge, or universal OpenAI-compat. */
+export type ProviderMode = `sdk` | `universal`
+export type ApiFormat = `auto` | `openai` | `anthropic`
+export type AgentRuntime = `legacy` | `dsh`
+export type DshCapabilityProfile = `full` | `recovery`
+
+export interface TextBlock {
+  type: `text`
+  text: string
+}
+
+export interface ToolUseBlock {
+  type: `tool_use`
+  id: string
+  name: string
+  input: Record<string, unknown>
+  reasoning_content?: string // DeepSeek thinking models: must be echoed back on the tool-call assistant message
+}
+
+export interface ToolResultBlock {
+  type: `tool_result`
+  tool_use_id: string
+  content: string | ToolResultData
+}
+
+export interface ToolResultData {
+  data: Record<string, unknown>
+  output_type: string
+  tool_id: string
+  error?: string
+  traceback?: string
+  session_id?: string
+}
+
+export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock
+
+export interface ChatMessage {
+  role: `user` | `assistant`
+  content: string | ContentBlock[]
+  timestamp: number
+  attachments?: Attachment[]
+}
+
+export interface ChatConfig {
+  provider: LLMProvider
+  model: string
+  temperature: number
+  max_tokens: number
+  api_key: string // stored in localStorage, not in settings schema
+  base_url: string // for universal OpenAI-compatible providers
+  api_format: ApiFormat
+  fetched_models: Partial<Record<LLMProvider, { id: string; label: string }[]>>
+  mode: ProviderMode // how to connect
+  agent_runtime?: AgentRuntime // agent loop; provider identity remains separate
+  /** DSH composition selected per turn. Full is the normal ChatGPT-like agent. */
+  dsh_profile?: DshCapabilityProfile
+  client_direct?: boolean // run tool-calling loop in-browser (no backend); auto-on under STATIC_ONLY
+}
+
+/** Provider info returned by GET /chat/providers */
+export interface ProviderInfoResponse {
+  id: string
+  name: string
+  type: `api` | `cli` | `local`
+  available: boolean
+  models: { id: string; label: string }[]
+  base_url: string | null
+}
+
+/** SDK agent providers route through the Agent SDK bridge */
+export const SDK_PROVIDERS: Set<LLMProvider> = new Set([`sdk-claude`, `sdk-codex`, `sdk-gemini`])
+
+/** Determine the default mode for a provider */
+export function default_mode_for(provider: LLMProvider): ProviderMode {
+  if (SDK_PROVIDERS.has(provider) || DSH_ONLY_PROVIDERS.has(provider)) return `sdk`
+  return `universal`
+}
+
+/** Provider identities that exist only inside the DSH runtime. */
+export const DSH_ONLY_PROVIDERS: ReadonlySet<LLMProvider> = new Set([
+  `antigravity`,
+  `openrouter`,
+  `agnes`,
+  `spark`,
+  `ernie`,
+  `grok`,
+  `copilot`,
+])
+
+export interface DocChunk {
+  id: number
+  source: string
+  heading: string
+  content: string
+}
+
+/** Extract display text from a ChatMessage's content (string or ContentBlock[]) */
+export function get_display_text(content: string | ContentBlock[]): string {
+  if (typeof content === `string`) return content
+  return content
+    .filter((b): b is TextBlock => b.type === `text`)
+    .map((b) => b.text)
+    .join(``)
+}
+
+/** A session summary for display in the Sessions tab */
+export interface SessionSummary {
+  session_id: string
+  agent: string // "claude" | "gemini" | "codex"
+  topic: string // First user message, truncated to ~80 chars
+  created_at: number // Unix ms
+  last_active: number // Unix ms
+  message_count: number
+  model?: string
+}
+
+/** Extract tool_use blocks from a ChatMessage's content */
+export function get_tool_uses(content: string | ContentBlock[]): ToolUseBlock[] {
+  if (typeof content === `string`) return []
+  return content.filter((b): b is ToolUseBlock => b.type === `tool_use`)
+}
+
+export type AgentType = `claude` | `codex` | `gemini`
+
+export interface Attachment {
+  type: `image` | `pdf` | `file`
+  name: string
+  mimeType: string
+  data: string
+}
+
+export function agent_from_provider(provider: LLMProvider): AgentType | null {
+  if (provider === `sdk-claude`) return `claude`
+  if (provider === `sdk-codex`) return `codex`
+  if (provider === `sdk-gemini`) return `gemini`
+  return null
+}
+
+export type ToolKind = `read` | `mutate`
+
+export interface ClientTool {
+  name: string
+  description: string
+  kind: ToolKind
+  input_schema: Record<string, unknown>
+}
+
+/** Request-local context for browser-executed client tools. */
+export interface ToolExecutionContext {
+  tab_id?: string
+}
+
+/** A tool call parsed from the model's response. */
+export interface ToolCall {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+}

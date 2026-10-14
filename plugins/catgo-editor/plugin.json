@@ -1,0 +1,32 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "catgo-editor",
+  "version": "0.2.8",
+  "description": "A CatGo structure file editor with host-managed reads and version-checked saves.",
+  "author": {
+    "name": "CatGo"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "CatGo Structure Editor",
+        "shortDescription": "Edit structures beside chat",
+        "longDescription": "Open CIF, XYZ and POSCAR files in a dedicated CatGo editor. Edit atomic coordinates and use undo/redo with version-checked saves through the host file interface.",
+        "developerName": "CatGo",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive",
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": "Open the CatGo structure editor beside this chat.",
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg",
+        "websiteURL": "https://github.com/Hello-QM/catgo-codex-plugin",
+        "supportURL": "https://github.com/Hello-QM/catgo-codex-plugin/issues"
+      }
+    }
+  },
+  "repository": "https://github.com/Hello-QM/catgo-codex-plugin",
+  "license": "AGPL-3.0-or-later"
+}

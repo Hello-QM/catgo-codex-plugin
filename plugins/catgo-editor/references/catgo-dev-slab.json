@@ -1,0 +1,30 @@
+{
+  "repository": "https://github.com/Hello-QM/catgo-dev",
+  "commit": "c1bbd5fa89c372e8e51285fa3b568a403133e68b",
+  "verifiedDate": "2026-10-12",
+  "files": {
+    "src/lib/structure/MillerSlabCutterPane.svelte": "9bd9ee446d6ab0428e770390f966d3e8739b073348d3c82f1fe00b261d290c64",
+    "src/lib/structure/miller-slab.ts": "a0a25e62cb44e21c290b5e5735eb959e6634162afb6a965e4494c56af03b8b10",
+    "extensions/rust/src/slab.rs": "ec1814028e3e2cbfca394594c62e55d19ef9227250ffcb36e3059bf83b90f076",
+    "extensions/rust/src/wasm.rs": "7cb8ef70ed83f927e56ea3c4c59382496cd0b6f5a1457cbeae845526e24bc0d9",
+    "src/lib/symmetry/index.ts": "198b5d5682a452d371d676e5829ef2fd68e56ef29513e2a552c37a3949a019c3",
+    "src/lib/symmetry/cell-transform.ts": "341b2769459b1d518c62276fc4b7b7c2627a93032dfb246f0fa2ce7b77d61412",
+    "src/lib/structure/lattice-ops.ts": "e7fc8e81250ff61b6dcebfae09d3ea37374b92cf61e4280345369b4921e9334d",
+    "src/lib/structure/pbc.ts": "8b47974355c94c214d312a067b832597f2b96478d1bd8ac91bf563f54817e4ca",
+    "src/lib/structure/ferrox-wasm-types.ts": "72d82e35da87a223c39b5ae325e813442e5d3cb069d10de84e52f6807e95a018"
+  },
+  "functions": {
+    "src/lib/structure/ferrox-wasm.ts": {
+      "wasm_generate_slab": "2ef3a2482d96f64a0c24f9f078d6afa0e9f8d19b324a8342753d6694bbe7a859",
+      "wasm_generate_slab_layers": "05792fd15233a640f2c7fa4747ad333a6b51f685c5bfb0400f9859a40a36a863",
+      "wasm_slab_termination_info": "a093cb6a3e032344d9d6f5cc879a4843db3701c332b2e0fd428233f1f98e3434",
+      "wasm_detect_layers_miller": "e696002a52fa72fcc27c8037b6915ee27d1c5daf466b06debe99c502282746a2",
+      "wasm_compute_d_spacing": "bb512f59fa8518ee124db8ea76c047c7fe5dd8bb22d5289c3acdf1d8a9f73289",
+      "wasm_miller_to_normal": "5999e6cf4f8cc595b2c5118091bcb79ade638ee1ea99c25bb1dc376bd8a26ffc"
+    },
+    "src/lib/structure/controllers/build-tools.svelte.ts": {
+      "handle_slab_structure_change": "125d9437c3007445ed853b2bf3637e42b75f9b14b5b65f0434ae8500f2a28cf2",
+      "handle_slab_camera_transition": "2ef2b22274f2eb4f8fb59a99ac999d9e05f1f9528515b2e18f75abfce59ab9b6"
+    }
+  }
+}

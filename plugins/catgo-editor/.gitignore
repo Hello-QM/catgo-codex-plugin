@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+ui/node_modules/
+preview/
+preview-build-sizes.json
+tests/document.bundle.mjs

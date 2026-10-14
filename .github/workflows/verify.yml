@@ -1,0 +1,48 @@
+name: Verify plugin
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  runtime:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python scripts/check-package.py
+      - run: python -m unittest discover -s plugins/catgo-editor/tests -v
+  viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: npm ci --ignore-scripts --prefix vendor/catgo
+      - run: npm ci --prefix plugins/catgo-editor/ui
+      - run: node scripts/apply-vendor-patches.mjs
+      - run: node plugins/catgo-editor/scripts/build-ui.mjs
+      - run: python3 scripts/check-package.py
+      - run: node --test plugins/catgo-editor/tests/document.test.mjs
+      - run: node plugins/catgo-editor/tests/mcp-client.mjs
+      - run: node plugins/catgo-editor/tests/slab-runtime.mjs
+      - run: npx --prefix plugins/catgo-editor/ui playwright install --with-deps chromium
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_SLAB_BONDS: '1'
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_IMPORT_AND_SLAB: '1'
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS: '1'

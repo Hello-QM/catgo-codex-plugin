@@ -1,0 +1,7 @@
+# Preserve imported sources, license texts and patch bytes verbatim.
+vendor/** -whitespace
+plugins/catgo-editor/third_party/** -whitespace
+plugins/catgo-editor/patches/** -whitespace
+plugins/catgo-editor/assets/*LICENSE -whitespace
+*.bin binary
+*.wasm binary

@@ -1,0 +1,145 @@
+//! # ferrox
+//!
+//! High-performance structure matching for crystallographic data.
+//!
+//! This crate provides a Rust implementation of structure matching algorithms,
+//! compatible with pymatgen's StructureMatcher but optimized for batch processing.
+//!
+//! ## Features
+//!
+//! - **Fast single-pair matching**: Compare two structures for equivalence
+//! - **Batch deduplication**: Find unique structures in large sets
+//! - **Parallel processing**: Automatic parallelization via Rayon (native only)
+//! - **Multiple comparators**: Species or Element-based matching
+//! - **Python bindings**: Optional PyO3 bindings for use from Python
+//! - **WASM bindings**: Optional wasm-bindgen bindings for browser use
+//!
+//! ## Example
+//!
+//! ```rust,ignore
+//! use ferrox::{Structure, StructureMatcher};
+//!
+//! let matcher = StructureMatcher::new()
+//!     .with_latt_len_tol(0.2)
+//!     .with_site_pos_tol(0.3)
+//!     .with_angle_tol(5.0);
+//!
+//! let is_match = matcher.fit(&struct1, &struct2);
+//! ```
+
+#![warn(missing_docs)]
+#![warn(clippy::all)]
+
+pub mod error;
+
+// Core types
+pub mod composition;
+pub mod element;
+pub mod lattice;
+pub mod species;
+pub mod structure;
+
+// Algorithms (upstream new)
+pub mod algorithms;
+pub mod batch;
+pub mod cell_ops;
+pub mod coordination;
+pub mod crystal_nn;
+pub mod defects;
+pub mod distortions;
+pub mod elastic;
+pub mod integrators;
+pub mod neighbors;
+pub mod optimizers;
+pub mod order_params;
+pub mod pbc;
+pub mod potentials;
+pub mod rdf;
+pub mod structure_matcher;
+pub mod trajectory;
+/// Persistent exact bond detection for typed trajectory frames.
+pub mod trajectory_bond;
+
+// Local unique modules (CatGO specific)
+pub mod adsorbate;
+pub mod alpha_shape;
+pub mod bonding;
+pub mod ewald;
+pub mod matcher;
+pub mod mof;
+pub mod heterostructure;
+pub mod moire;
+pub mod nanoscroll;
+pub mod nanotube;
+pub mod optimizer;
+pub mod passivate;
+pub mod slab;
+pub mod zsl;
+pub mod uff_bridge;
+pub mod voronoi_cell;
+
+// Transformations (internal - public API is via Structure methods)
+pub(crate) mod transformations;
+
+// Re-export config structs for use with Structure transformation methods
+pub use algorithms::EnumConfig;
+pub use transformations::{OrderDisorderedConfig, PartialRemoveConfig};
+
+// I/O
+pub mod cif;
+pub mod io;
+
+// Analysis
+pub mod oxidation;
+pub mod surfaces;
+pub mod xrd;
+
+// Re-exports for convenience
+pub use error::{FerroxError, OnError, Result};
+
+// Python bindings (optional)
+#[cfg(feature = "python")]
+mod python;
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
+// WASM bindings (optional)
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
+#[cfg(feature = "wasm")]
+pub mod wasm_hetero;
+
+#[cfg(feature = "wasm")]
+pub mod wasm_moire;
+
+#[cfg(feature = "wasm")]
+pub mod wasm_nanoscroll;
+
+#[cfg(feature = "wasm")]
+pub mod wasm_types;
+
+// Cube parsing/meshing is intentionally limited to the two complete browser
+// feature sets. Enabling the lower-level `wasm` feature alone keeps its former
+// behavior and does not select a cube-core execution backend.
+#[cfg(any(feature = "wasm-scalar", feature = "wasm-threaded"))]
+pub mod wasm_cube;
+
+// WASM threads (feature `wasm-threaded`): re-export the Rayon thread-pool
+// initializer so the wasm-bindgen JS glue exports `initThreadPool`. Callers
+// MUST await it before any Rayon path runs (design §8.3). Deliberately gated
+// on `wasm` + `rayon` (not on the dep): building that pair WITHOUT
+// wasm-bindgen-rayon is invalid — Rayon with no thread pool deadlocks in the
+// browser — and this line makes such a build fail at compile time.
+#[cfg(all(target_arch = "wasm32", feature = "wasm", feature = "rayon"))]
+pub use wasm_bindgen_rayon::init_thread_pool;
+
+/// Python module entry point.
+#[cfg(feature = "python")]
+#[pymodule]
+fn _ferrox(py_mod: &Bound<'_, PyModule>) -> PyResult<()> {
+    py_mod.add("__version__", env!("CARGO_PKG_VERSION"))?;
+    python::register(py_mod)?;
+    Ok(())
+}

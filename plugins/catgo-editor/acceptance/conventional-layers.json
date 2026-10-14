@@ -1,0 +1,49 @@
+{
+  "host": "protocol test harness",
+  "nativeCodexHostVerified": false,
+  "fixture": "water.xyz",
+  "atoms": 3,
+  "entryBytes": 251117,
+  "programResources": 21,
+  "renderedPixels": {
+    "width": 2800,
+    "height": 1712,
+    "colorCount": 181
+  },
+  "conventionalLayerChecks": {
+    "useConventionalCell": true,
+    "miller": [
+      1,
+      1,
+      0
+    ],
+    "layers": 4,
+    "termination": 0,
+    "atoms": 24,
+    "Ir": 8,
+    "O": 16,
+    "vacuum": 15.000000176184301
+  },
+  "passed": [
+    "small UI entry",
+    "program loading through MCP resources",
+    "single SDK initialization",
+    "buffered file-open input",
+    "opaque-origin sandbox and CSP",
+    "host file read",
+    "real CatGo 3D pixels rendered",
+    "coordinate edit",
+    "undo/redo",
+    "version-checked write",
+    "saved geometry reparses; atom count and cell preserved",
+    "conflict preserves edits",
+    "default conventional-cell conversion",
+    "four-layer (110) cut uses upstream layer semantics",
+    "IrO2 stoichiometry and 15 \u00c5 vacuum",
+    "layer-mode slab saves through the host bridge",
+    "visible resource-loading failure"
+  ],
+  "pageErrors": [],
+  "version": "0.2.7",
+  "date": "2026-10-12"
+}

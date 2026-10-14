@@ -1,0 +1,289 @@
+diff --git a/src/lib/structure/SlabPreview.svelte b/src/lib/structure/SlabPreview.svelte
+index 01ca3533..1bf706da 100644
+--- a/src/lib/structure/SlabPreview.svelte
++++ b/src/lib/structure/SlabPreview.svelte
+@@ -8,6 +8,7 @@
+   import type { SlabPreviewStructure } from './miller-slab'
+   import type { BondDistanceRule, Site } from './index'
+   import { BONDING_STRATEGIES, type BondingStrategy } from './bonding'
++  import { slab_preview_bond_instances } from './slab-preview-bonds'
+   import Bond from './Bond.svelte'
+   import { Cylinder, Lattice } from './index'
+   import CanvasTooltip from './CanvasTooltip.svelte'
+@@ -16,7 +17,7 @@
+   let {
+     cutting_slab_preview = null,
+     cutting_show_bonds = true,
+-    bonding_strategy = 'max_dist' as BondingStrategy,
++    bonding_strategy = 'atom_radii' as BondingStrategy,
+     bonding_options = {},
+     bond_thickness = 0.15,
+     bond_color = `#ffffff`,
+@@ -28,6 +29,7 @@
+     bond_distance_rules = [] as BondDistanceRule[],
+     float_fmt = `.3~f`,
+     camera_is_moving = false,
++    hide_incomplete_bonds = true,
+   }: {
+     cutting_slab_preview?: SlabPreviewStructure | null
+     cutting_show_bonds?: boolean
+@@ -43,6 +45,7 @@
+     bond_distance_rules?: BondDistanceRule[]
+     float_fmt?: string
+     camera_is_moving?: boolean
++    hide_incomplete_bonds?: boolean
+   } = $props()
+ 
+   // Hover state for preview atoms
+@@ -72,7 +75,7 @@
+   let raw_slab_bonds = $derived.by(() => {
+     if (!cutting_slab_preview || !cutting_show_bonds) return []
+     const preview_struct = cutting_slab_preview.structure
+-    if (!preview_struct?.sites || preview_struct.sites.length < 2) return []
++    if (!preview_struct?.sites.length) return []
+     if (preview_struct.sites.length > 200) return []
+     try {
+       return BONDING_STRATEGIES[bonding_strategy](preview_struct, bonding_options)
+@@ -119,36 +122,14 @@
+   // Convert slab preview bonds to instanced bond group format
+   let slab_preview_bond_group = $derived.by(() => {
+     if (!cutting_slab_preview || slab_preview_bonds.length === 0) return null
+-    const preview_sites = cutting_slab_preview.structure.sites
+-
+-    const instances: { matrix: Float32Array; color_start: string; color_end: string }[] = []
+-    for (const bond_data of slab_preview_bonds) {
+-      // Skip bonds with invalid transform matrices
+-      if (
+-        !bond_data.transform_matrix ||
+-        bond_data.transform_matrix.some((val: number) => !Number.isFinite(val))
+-      ) {
+-        continue
+-      }
+-
+-      const site_a = preview_sites[bond_data.site_idx_1]
+-      const site_b = preview_sites[bond_data.site_idx_2]
+-      if (!site_a || !site_b) continue
+-
+-      const get_majority_color = (site: typeof site_a) => {
+-        if (!site?.species || site.species.length === 0) return bond_color
+-        const majority_species = site.species.reduce((max, spec) =>
+-          spec.occu > max.occu ? spec : max
+-        )
+-        return colors.element?.[majority_species.element] || bond_color
+-      }
+-
+-      instances.push({
+-        matrix: bond_data.transform_matrix,
+-        color_start: get_majority_color(site_a),
+-        color_end: get_majority_color(site_b),
+-      })
++    const get_majority_color = (site: Site) => {
++      if (!site.species.length) return bond_color
++      const majority = site.species.reduce((max, spec) => spec.occu > max.occu ? spec : max)
++      return colors.element?.[majority.element] || bond_color
+     }
++    const instances = slab_preview_bond_instances(
++      cutting_slab_preview.structure, slab_preview_bonds, get_majority_color, hide_incomplete_bonds,
++    )
+ 
+     if (instances.length === 0) return null
+ 
+@@ -184,6 +165,7 @@
+   />
+ 
+   <!-- Slab atoms - interactive for hover and selection -->
++  <T.Group name="slab-preview-atoms">
+   {#each preview_sites as site, idx (idx)}
+     {@const element = site.species[0]?.element}
+     {@const elem_color = colors.element?.[element] ?? '#888888'}
+@@ -206,10 +188,13 @@
+       </T.Mesh>
+     {/if}
+   {/each}
++  </T.Group>
+ 
+   <!-- Slab bonds (using same bonding strategy as main structure) -->
+   {#if slab_preview_bond_group}
+-    <Bond group={slab_preview_bond_group} />
++    <T.Group name="slab-preview-bonds">
++      <Bond group={slab_preview_bond_group} />
++    </T.Group>
+   {/if}
+ 
+   <!-- Measurement lines between selected atoms -->
+diff --git a/src/lib/structure/StructureScene.svelte b/src/lib/structure/StructureScene.svelte
+index 421dc406..29ba2ade 100644
+--- a/src/lib/structure/StructureScene.svelte
++++ b/src/lib/structure/StructureScene.svelte
+@@ -7861,6 +7861,7 @@
+         <SlabPreview
+           {cutting_slab_preview}
+           {cutting_show_bonds}
++          {hide_incomplete_bonds}
+           {bonding_strategy}
+           bonding_options={bonding_options_eff}
+           {bond_thickness}
+diff --git a/src/lib/structure/slab-preview-bonds.ts b/src/lib/structure/slab-preview-bonds.ts
+new file mode 100644
+index 00000000..0c50512b
+--- /dev/null
++++ b/src/lib/structure/slab-preview-bonds.ts
+@@ -0,0 +1,46 @@
++import type { BondPair, PymatgenStructure, Site, Vec3 } from './index'
++import { compute_bond_transform } from './bonding'
++
++export interface SlabPreviewBondInstance {
++  matrix: Float32Array
++  color_start: string
++  color_end: string
++}
++
++/** Match the main viewer's periodic-bond convention: B's partner position is
++ * B + jimage · lattice. Preview atoms contain only the home cell, so cross-cell
++ * bonds have no visible partner when incomplete bonds are hidden. If shown,
++ * render two short halves anchored at A and B, never a line across the cell. */
++export function slab_preview_bond_instances(
++  structure: PymatgenStructure,
++  bonds: readonly BondPair[],
++  color_for_site: (site: Site) => string,
++  hide_incomplete_bonds = true,
++): SlabPreviewBondInstance[] {
++  const instances: SlabPreviewBondInstance[] = []
++  const add = (from: Vec3, to: Vec3, color_start: string, color_end: string) => {
++    if (![...from, ...to].every(Number.isFinite) || Math.hypot(...from.map((v, k) => v - to[k])) < 1e-8) return
++    instances.push({ matrix: compute_bond_transform(from, to), color_start, color_end })
++  }
++  for (const bond of bonds) {
++    const site_a = structure.sites[bond.site_idx_1]
++    const site_b = structure.sites[bond.site_idx_2]
++    if (!site_a || !site_b) continue
++    const image = bond.jimage ?? [0, 0, 0]
++    if (image.length !== 3 || !image.every(Number.isInteger)) continue
++    const periodic = image.some(v => v !== 0)
++    if (periodic && hide_incomplete_bonds) continue
++    const color_a = color_for_site(site_a), color_b = color_for_site(site_b)
++    if (!periodic) {
++      add(site_a.xyz, site_b.xyz, color_a, color_b)
++      continue
++    }
++    const { matrix, pbc = [true, true, true] } = structure.lattice
++    if (image.some((v, axis) => v !== 0 && !pbc[axis])) continue
++    const shift = [0, 1, 2].map(axis => image.reduce((sum, v, row) => sum + v * matrix[row][axis], 0))
++    const midpoint = site_a.xyz.map((v, axis) => (v + site_b.xyz[axis] + shift[axis]) / 2) as Vec3
++    add(site_a.xyz, midpoint, color_a, color_a)
++    add(midpoint.map((v, axis) => v - shift[axis]) as Vec3, site_b.xyz, color_b, color_b)
++  }
++  return instances
++}
+diff --git a/src/lib/structure/__tests__/slab-preview-bonds.test.ts b/src/lib/structure/__tests__/slab-preview-bonds.test.ts
+new file mode 100644
+index 00000000..8afbd9a9
+--- /dev/null
++++ b/src/lib/structure/__tests__/slab-preview-bonds.test.ts
+@@ -0,0 +1,106 @@
++import { describe, expect, it } from 'vitest'
++import type { BondPair, PymatgenStructure, Vec3 } from '../index'
++import { atom_radii } from '../bonding'
++import { generate_preview_slab } from '../miller-slab'
++import { parse_poscar } from '../parsers/vasp'
++import { slab_preview_bond_instances } from '../slab-preview-bonds'
++
++const bulk = parse_poscar(`Ir2 O4
++1.0
++3.17670624 0 0
++0 4.50531387 0
++0 0 4.50531387
++Ir O
++2 4
++Direct
++0.5 0.5 0.5
++0 0 0
++0 0.6913367 0.6913367
++0.5 0.8086633 0.1913367
++0 0.3086633 0.3086633
++0.5 0.1913367 0.8086633
++`) as PymatgenStructure
++const color = (site: PymatgenStructure['sites'][number]) => site.species[0].element
++const length = (matrix: Float32Array) => Math.hypot(matrix[4], matrix[5], matrix[6])
++const ends = (matrix: Float32Array) => [-0.5, 0.5].map(sign =>
++  [0, 1, 2].map(axis => matrix[12 + axis] + sign * matrix[4 + axis]) as Vec3,
++)
++const distance = (a: Vec3, b: Vec3) => Math.hypot(...a.map((v, axis) => v - b[axis]))
++
++describe('slab preview draws the physical periodic bond', () => {
++  it.each([[1, 1], [2, 2]] as [number, number][])(
++    'IrO2 (001), %ix%i: no full-cell diagonals or bonds through vacuum', (a, b) => {
++      const original = structuredClone(bulk)
++      const slab = generate_preview_slab(bulk, {
++        miller_index: [0, 0, 1], thickness: 9.01062774, vacuum: 15, offset: 1,
++        growth_mode: 'anchor_minus_z', supercell: [a, b],
++      })!.structure
++      expect(slab.sites).toHaveLength(12 * a * b)
++      const bonds = atom_radii(slab)
++      const boundary = bonds.filter(bond => bond.jimage.some(v => v !== 0))
++      const internal = bonds.filter(bond => bond.jimage.every(v => v === 0))
++      expect(boundary.length).toBeGreaterThan(0)
++      // Demonstrate the regression: the old preview used this unshifted matrix
++      // even though the detected periodic bond was physically much shorter.
++      expect(boundary.some(bond => length(bond.transform_matrix) > bond.bond_length + 1)).toBe(true)
++      expect(bonds.every(bond => bond.jimage[2] === 0)).toBe(true)
++      expect(slab.lattice.pbc).toEqual([true, true, false])
++      const complete = slab_preview_bond_instances(slab, bonds, color)
++      expect(complete).toHaveLength(internal.length)
++      complete.forEach((instance, index) => {
++        expect(length(instance.matrix)).toBeCloseTo(internal[index].bond_length, 5)
++      })
++      const halves = slab_preview_bond_instances(slab, boundary, color, false)
++      expect(halves).toHaveLength(boundary.length * 2)
++      boundary.forEach((bond, index) => {
++        const [first, second] = halves.slice(index * 2, index * 2 + 2)
++        expect(length(first.matrix)).toBeCloseTo(bond.bond_length / 2, 5)
++        expect(length(second.matrix)).toBeCloseTo(bond.bond_length / 2, 5)
++        expect(Math.min(...ends(first.matrix).map(end => distance(end, slab.sites[bond.site_idx_1].xyz)))).toBeLessThan(1e-5)
++        expect(Math.min(...ends(second.matrix).map(end => distance(end, slab.sites[bond.site_idx_2].xyz)))).toBeLessThan(1e-5)
++      })
++      expect(bulk).toEqual(original)
++    },
++  )
++
++  it('uses the complete skewed-lattice image vector and preserves endpoint colors', () => {
++    const slab = structuredClone(bulk)
++    slab.lattice.matrix = [[5, 0, 0], [2, 4, 0], [0, 0, 20]]
++    slab.lattice.pbc = [true, true, false]
++    slab.sites = slab.sites.slice(0, 2)
++    slab.sites[0].xyz = [6.8, 3.8, 9]
++    slab.sites[1].xyz = [0.2, 0.2, 9]
++    slab.sites[1].species = [{ element: 'O', occu: 1 }]
++    const bonds = atom_radii(slab)
++    expect(bonds).toHaveLength(1)
++    expect(bonds[0].jimage).toEqual([1, 1, 0])
++    const halves = slab_preview_bond_instances(slab, bonds, color, false)
++    expect(halves.map(instance => instance.color_start)).toEqual(['Ir', 'O'])
++    halves.forEach(instance => {
++      expect(instance.color_start).toBe(instance.color_end)
++      expect(length(instance.matrix)).toBeCloseTo(Math.hypot(0.4, 0.4) / 2, 5)
++    })
++  })
++
++  it('handles periodic self images of a one-site primitive cell', () => {
++    const slab = structuredClone(bulk)
++    slab.lattice.matrix = [[2, 0, 0], [0, 8, 0], [0, 0, 20]]
++    slab.lattice.pbc = [true, true, false]
++    slab.sites = slab.sites.slice(0, 1)
++    slab.sites[0].xyz = [0, 0, 7.5]
++    const bonds = atom_radii(slab)
++    expect(bonds).toHaveLength(1)
++    const halves = slab_preview_bond_instances(slab, bonds, color, false)
++    expect(halves).toHaveLength(2)
++    halves.forEach(instance => expect(length(instance.matrix)).toBeCloseTo(1, 6))
++    expect(slab_preview_bond_instances(slab, bonds, color)).toHaveLength(0)
++  })
++
++  it('rejects a cross-vacuum image and ignores missing atom indices', () => {
++    const slab = structuredClone(bulk)
++    slab.lattice.pbc = [true, true, false]
++    const bond = { ...atom_radii(slab)[0], jimage: [0, 0, 1] } as BondPair
++    expect(slab_preview_bond_instances(slab, [bond], color, false)).toHaveLength(0)
++    expect(slab_preview_bond_instances(slab, [{ ...bond, site_idx_2: 100 }], color, false)).toHaveLength(0)
++  })
++})

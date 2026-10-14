@@ -1,0 +1,18 @@
+[package]
+name = "cube-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared, platform-neutral Cube parsing and isosurface algorithms"
+license = "AGPL-3.0-or-later"
+publish = false
+
+[features]
+default = ["parallel"]
+parallel = ["dep:rayon"]
+scalar = []
+
+[dependencies]
+anyhow = "1.0"
+rayon = { version = "1.10", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+

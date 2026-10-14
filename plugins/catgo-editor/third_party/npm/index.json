@@ -1,0 +1,913 @@
+{
+  "@huggingface/transformers": {
+    "version": "3.8.1",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/huggingface/transformers.js.git"
+    },
+    "texts": [
+      "third_party/npm/huggingface__transformers/LICENSE"
+    ]
+  },
+  "@modelcontextprotocol/ext-apps": {
+    "version": "1.7.5",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/modelcontextprotocol/ext-apps"
+    },
+    "texts": [
+      "third_party/npm/modelcontextprotocol__ext-apps/LICENSE"
+    ]
+  },
+  "@modelcontextprotocol/sdk": {
+    "version": "1.29.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/modelcontextprotocol/typescript-sdk.git"
+    },
+    "texts": [
+      "third_party/npm/modelcontextprotocol__sdk/LICENSE"
+    ]
+  },
+  "@openai/mcp-extensions": {
+    "version": "0.1.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/openai/mcp-extensions.git",
+      "directory": "typescript"
+    },
+    "texts": [
+      "third_party/npm/openai__mcp-extensions/LICENSE"
+    ]
+  },
+  "@ricky0123/vad-web": {
+    "version": "0.0.30",
+    "license": "ISC",
+    "repository": null,
+    "texts": []
+  },
+  "@sapphi-red/web-noise-suppressor": {
+    "version": "0.3.5",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/sapphi-red/web-noise-suppressor.git"
+    },
+    "texts": [
+      "third_party/npm/sapphi-red__web-noise-suppressor/LICENSE"
+    ]
+  },
+  "@spglib/moyo-wasm": {
+    "version": "0.7.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/spglib/moyo"
+    },
+    "texts": []
+  },
+  "@tauri-apps/api": {
+    "version": "2.11.1",
+    "license": "Apache-2.0 OR MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/tauri-apps/tauri.git"
+    },
+    "texts": [
+      "third_party/npm/tauri-apps__api/LICENSE_MIT",
+      "third_party/npm/tauri-apps__api/LICENSE_APACHE-2.0"
+    ]
+  },
+  "@tauri-apps/plugin-dialog": {
+    "version": "2.6.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/plugins-workspace",
+    "texts": [
+      "third_party/npm/tauri-apps__plugin-dialog/LICENSE.spdx"
+    ]
+  },
+  "@tauri-apps/plugin-fs": {
+    "version": "2.4.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/plugins-workspace",
+    "texts": [
+      "third_party/npm/tauri-apps__plugin-fs/LICENSE.spdx"
+    ]
+  },
+  "@tauri-apps/plugin-http": {
+    "version": "2.5.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tauri-apps/plugins-workspace",
+    "texts": [
+      "third_party/npm/tauri-apps__plugin-http/LICENSE.spdx"
+    ]
+  },
+  "@threejs-kit/instanced-sprite-mesh": {
+    "version": "2.5.1",
+    "license": null,
+    "repository": null,
+    "texts": [
+      "third_party/npm/threejs-kit__instanced-sprite-mesh/LICENSE.md"
+    ]
+  },
+  "@threlte/core": {
+    "version": "8.3.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/threlte/threlte.git",
+      "directory": "packages/core"
+    },
+    "texts": [
+      "third_party/npm/threlte__core/LICENSE.md"
+    ]
+  },
+  "@threlte/extras": {
+    "version": "9.7.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/threlte/threlte.git",
+      "directory": "packages/extras"
+    },
+    "texts": [
+      "third_party/npm/threlte__extras/LICENSE.md"
+    ]
+  },
+  "bidi-js": {
+    "version": "1.1.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/lojjic/bidi-js.git"
+    },
+    "texts": [
+      "third_party/npm/bidi-js/LICENSE.txt"
+    ]
+  },
+  "camera-controls": {
+    "version": "3.1.2",
+    "license": "MIT",
+    "repository": "yomotsu/camera-controls",
+    "texts": [
+      "third_party/npm/camera-controls/LICENSE"
+    ]
+  },
+  "clsx": {
+    "version": "2.1.1",
+    "license": "MIT",
+    "repository": "lukeed/clsx",
+    "texts": [
+      "third_party/npm/clsx/license"
+    ]
+  },
+  "d3-array": {
+    "version": "3.2.4",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-array.git"
+    },
+    "texts": [
+      "third_party/npm/d3-array/LICENSE"
+    ]
+  },
+  "d3-color": {
+    "version": "3.1.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-color.git"
+    },
+    "texts": [
+      "third_party/npm/d3-color/LICENSE"
+    ]
+  },
+  "d3-dispatch": {
+    "version": "3.0.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-dispatch.git"
+    },
+    "texts": [
+      "third_party/npm/d3-dispatch/LICENSE"
+    ]
+  },
+  "d3-force": {
+    "version": "3.0.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-force.git"
+    },
+    "texts": [
+      "third_party/npm/d3-force/LICENSE"
+    ]
+  },
+  "d3-format": {
+    "version": "3.1.2",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-format.git"
+    },
+    "texts": [
+      "third_party/npm/d3-format/LICENSE"
+    ]
+  },
+  "d3-hierarchy": {
+    "version": "3.1.2",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-hierarchy.git"
+    },
+    "texts": [
+      "third_party/npm/d3-hierarchy/LICENSE"
+    ]
+  },
+  "d3-interpolate": {
+    "version": "3.0.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-interpolate.git"
+    },
+    "texts": [
+      "third_party/npm/d3-interpolate/LICENSE"
+    ]
+  },
+  "d3-interpolate-path": {
+    "version": "2.3.0",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/pbeshai/d3-interpolate-path.git"
+    },
+    "texts": [
+      "third_party/npm/d3-interpolate-path/LICENSE"
+    ]
+  },
+  "d3-path": {
+    "version": "3.1.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-path.git"
+    },
+    "texts": [
+      "third_party/npm/d3-path/LICENSE"
+    ]
+  },
+  "d3-quadtree": {
+    "version": "3.0.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-quadtree.git"
+    },
+    "texts": [
+      "third_party/npm/d3-quadtree/LICENSE"
+    ]
+  },
+  "d3-scale": {
+    "version": "4.0.2",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-scale.git"
+    },
+    "texts": [
+      "third_party/npm/d3-scale/LICENSE"
+    ]
+  },
+  "d3-scale-chromatic": {
+    "version": "3.1.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-scale-chromatic.git"
+    },
+    "texts": [
+      "third_party/npm/d3-scale-chromatic/LICENSE"
+    ]
+  },
+  "d3-shape": {
+    "version": "3.2.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-shape.git"
+    },
+    "texts": [
+      "third_party/npm/d3-shape/LICENSE"
+    ]
+  },
+  "d3-time": {
+    "version": "3.1.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-time.git"
+    },
+    "texts": [
+      "third_party/npm/d3-time/LICENSE"
+    ]
+  },
+  "d3-time-format": {
+    "version": "4.1.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-time-format.git"
+    },
+    "texts": [
+      "third_party/npm/d3-time-format/LICENSE"
+    ]
+  },
+  "d3-timer": {
+    "version": "3.0.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/d3/d3-timer.git"
+    },
+    "texts": [
+      "third_party/npm/d3-timer/LICENSE"
+    ]
+  },
+  "debug": {
+    "version": "4.4.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/debug-js/debug.git"
+    },
+    "texts": [
+      "third_party/npm/debug/LICENSE"
+    ]
+  },
+  "dompurify": {
+    "version": "3.4.7",
+    "license": "(MPL-2.0 OR Apache-2.0)",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/cure53/DOMPurify.git"
+    },
+    "texts": [
+      "third_party/npm/dompurify/LICENSE"
+    ]
+  },
+  "double-metaphone": {
+    "version": "2.0.1",
+    "license": "MIT",
+    "repository": "words/double-metaphone",
+    "texts": [
+      "third_party/npm/double-metaphone/license"
+    ]
+  },
+  "entities": {
+    "version": "4.5.0",
+    "license": "BSD-2-Clause",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/fb55/entities.git"
+    },
+    "texts": [
+      "third_party/npm/entities/LICENSE"
+    ]
+  },
+  "esm-env": {
+    "version": "1.2.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/benmccann/esm-env.git"
+    },
+    "texts": [
+      "third_party/npm/esm-env/LICENSE"
+    ]
+  },
+  "fflate": {
+    "version": "0.8.2",
+    "license": "MIT",
+    "repository": "https://github.com/101arrowz/fflate",
+    "texts": [
+      "third_party/npm/fflate/LICENSE"
+    ]
+  },
+  "fuse.js": {
+    "version": "7.1.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/krisk/Fuse.git"
+    },
+    "texts": [
+      "third_party/npm/fuse.js/LICENSE"
+    ]
+  },
+  "get-plane-normal": {
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mattdesl/get-plane-normal.git"
+    },
+    "texts": [
+      "third_party/npm/get-plane-normal/LICENSE.md"
+    ]
+  },
+  "gl-mat4": {
+    "version": "1.2.0",
+    "license": "Zlib",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/stackgl/gl-mat4"
+    },
+    "texts": [
+      "third_party/npm/gl-mat4/LICENSE.md"
+    ]
+  },
+  "gl-quat": {
+    "version": "1.0.0",
+    "license": {
+      "type": "Zlib",
+      "url": "http://github.com/stackgl/gl-quat/blob/master/LICENSE.md"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/stackgl/gl-quat.git"
+    },
+    "texts": [
+      "third_party/npm/gl-quat/LICENSE.md"
+    ]
+  },
+  "gl-vec3": {
+    "version": "1.2.0",
+    "license": "zlib",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/stackgl/gl-vec3.git"
+    },
+    "texts": [
+      "third_party/npm/gl-vec3/LICENSE.md"
+    ]
+  },
+  "gl-vec4": {
+    "version": "1.0.1",
+    "license": {
+      "type": "Zlib",
+      "url": "http://github.com/stackgl/gl-mat4/blob/master/LICENSE.md"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/stackgl/gl-vec4.git"
+    },
+    "texts": [
+      "third_party/npm/gl-vec4/LICENSE.md"
+    ]
+  },
+  "h5wasm": {
+    "version": "0.8.11",
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/usnistgov/h5wasm.git"
+    },
+    "texts": [
+      "third_party/npm/h5wasm/LICENSE.txt"
+    ]
+  },
+  "highlight.js": {
+    "version": "11.11.1",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/highlightjs/highlight.js.git"
+    },
+    "texts": [
+      "third_party/npm/highlight.js/LICENSE"
+    ]
+  },
+  "internmap": {
+    "version": "2.0.3",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mbostock/internmap.git"
+    },
+    "texts": [
+      "third_party/npm/internmap/LICENSE"
+    ]
+  },
+  "js-yaml": {
+    "version": "4.1.1",
+    "license": "MIT",
+    "repository": "nodeca/js-yaml",
+    "texts": [
+      "third_party/npm/js-yaml/LICENSE"
+    ]
+  },
+  "jszip": {
+    "version": "3.10.1",
+    "license": "(MIT OR GPL-3.0-or-later)",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Stuk/jszip.git"
+    },
+    "texts": [
+      "third_party/npm/jszip/LICENSE.markdown"
+    ]
+  },
+  "linkify-it": {
+    "version": "5.0.2",
+    "license": "MIT",
+    "repository": "markdown-it/linkify-it",
+    "texts": [
+      "third_party/npm/linkify-it/LICENSE"
+    ]
+  },
+  "markdown-it": {
+    "version": "14.2.0",
+    "license": "MIT",
+    "repository": "markdown-it/markdown-it",
+    "texts": [
+      "third_party/npm/markdown-it/LICENSE"
+    ]
+  },
+  "mdurl": {
+    "version": "2.1.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/markdown-it/mdurl.git"
+    },
+    "texts": [
+      "third_party/npm/mdurl/LICENSE"
+    ]
+  },
+  "mitt": {
+    "version": "3.0.1",
+    "license": "MIT",
+    "repository": "developit/mitt",
+    "texts": [
+      "third_party/npm/mitt/LICENSE"
+    ]
+  },
+  "monaco-editor": {
+    "version": "0.55.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/microsoft/monaco-editor"
+    },
+    "texts": [
+      "third_party/npm/monaco-editor/LICENSE"
+    ]
+  },
+  "monotone-convex-hull-2d": {
+    "version": "1.0.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/monotone-convex-hull-2d.git"
+    },
+    "texts": [
+      "third_party/npm/monotone-convex-hull-2d/LICENSE"
+    ]
+  },
+  "ms": {
+    "version": "2.1.3",
+    "license": "MIT",
+    "repository": "vercel/ms",
+    "texts": [
+      "third_party/npm/ms/license.md"
+    ]
+  },
+  "onnxruntime-common": {
+    "version": "1.21.0",
+    "license": "MIT",
+    "repository": {
+      "url": "https://github.com/Microsoft/onnxruntime.git",
+      "type": "git"
+    },
+    "texts": []
+  },
+  "onnxruntime-web": {
+    "version": "1.22.0-dev.20250409-89f8206ba4",
+    "license": "MIT",
+    "repository": {
+      "url": "https://github.com/Microsoft/onnxruntime.git",
+      "type": "git"
+    },
+    "texts": []
+  },
+  "opencc-js": {
+    "version": "1.3.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/nk2028/opencc-js.git"
+    },
+    "texts": [
+      "third_party/npm/opencc-js/LICENSE"
+    ]
+  },
+  "pdfjs-dist": {
+    "version": "6.1.200",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/mozilla/pdf.js.git"
+    },
+    "texts": [
+      "third_party/npm/pdfjs-dist/LICENSE"
+    ]
+  },
+  "plotly.js-dist-min": {
+    "version": "3.3.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/plotly/plotly.js.git"
+    },
+    "texts": [
+      "third_party/npm/plotly.js-dist-min/LICENSE"
+    ]
+  },
+  "point-line-distance": {
+    "version": "1.0.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mauriciopoppe/point-line-distance"
+    },
+    "texts": []
+  },
+  "punycode.js": {
+    "version": "2.3.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mathiasbynens/punycode.js.git"
+    },
+    "texts": [
+      "third_party/npm/punycode.js/LICENSE-MIT.txt"
+    ]
+  },
+  "quickhull3d": {
+    "version": "3.1.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mauriciopoppe/quickhull3d"
+    },
+    "texts": [
+      "third_party/npm/quickhull3d/LICENSE"
+    ]
+  },
+  "robust-orientation": {
+    "version": "1.2.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/robust-orientation.git"
+    },
+    "texts": [
+      "third_party/npm/robust-orientation/LICENSE"
+    ]
+  },
+  "robust-scale": {
+    "version": "1.0.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/robust-scale.git"
+    },
+    "texts": [
+      "third_party/npm/robust-scale/LICENSE"
+    ]
+  },
+  "robust-subtract": {
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/robust-subtract.git"
+    },
+    "texts": [
+      "third_party/npm/robust-subtract/LICENSE"
+    ]
+  },
+  "robust-sum": {
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/robust-sum.git"
+    },
+    "texts": [
+      "third_party/npm/robust-sum/LICENSE"
+    ]
+  },
+  "svelte": {
+    "version": "5.48.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/sveltejs/svelte.git",
+      "directory": "packages/svelte"
+    },
+    "texts": [
+      "third_party/npm/svelte/LICENSE.md"
+    ]
+  },
+  "svelte-multiselect": {
+    "version": "11.2.4",
+    "license": "MIT",
+    "repository": "https://github.com/janosh/svelte-multiselect",
+    "texts": [
+      "third_party/npm/svelte-multiselect/license"
+    ]
+  },
+  "three": {
+    "version": "0.181.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mrdoob/three.js"
+    },
+    "texts": [
+      "third_party/npm/three/LICENSE"
+    ]
+  },
+  "three-gpu-pathtracer": {
+    "version": "0.0.24",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/gkjohnson/three-gpu-pathtracer.git"
+    },
+    "texts": [
+      "third_party/npm/three-gpu-pathtracer/LICENSE"
+    ]
+  },
+  "three-mesh-bvh": {
+    "version": "0.9.7",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/gkjohnson/three-mesh-bvh.git"
+    },
+    "texts": [
+      "third_party/npm/three-mesh-bvh/LICENSE"
+    ]
+  },
+  "three-perf": {
+    "version": "1.0.11",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/TheoTheDev/three-perf.git"
+    },
+    "texts": [
+      "third_party/npm/three-perf/LICENSE"
+    ]
+  },
+  "three-viewport-gizmo": {
+    "version": "2.2.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/Fennec-hub/three-viewport-gizmo.git"
+    },
+    "texts": [
+      "third_party/npm/three-viewport-gizmo/LICENSE"
+    ]
+  },
+  "troika-three-text": {
+    "version": "0.52.5",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/protectwise/troika.git",
+      "directory": "packages/troika-three-text"
+    },
+    "texts": [
+      "third_party/npm/troika-three-text/LICENSE"
+    ]
+  },
+  "troika-three-utils": {
+    "version": "0.52.5",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/protectwise/troika.git",
+      "directory": "packages/troika-three-utils"
+    },
+    "texts": [
+      "third_party/npm/troika-three-utils/LICENSE"
+    ]
+  },
+  "troika-worker-utils": {
+    "version": "0.52.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/protectwise/troika.git",
+      "directory": "packages/troika-worker-utils"
+    },
+    "texts": [
+      "third_party/npm/troika-worker-utils/LICENSE"
+    ]
+  },
+  "tweakpane": {
+    "version": "3.1.10",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/cocopon/tweakpane.git"
+    },
+    "texts": []
+  },
+  "two-product": {
+    "version": "1.0.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/two-product.git"
+    },
+    "texts": [
+      "third_party/npm/two-product/LICENSE"
+    ]
+  },
+  "two-sum": {
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mikolalysenko/two-sum.git"
+    },
+    "texts": [
+      "third_party/npm/two-sum/LICENSE"
+    ]
+  },
+  "uc.micro": {
+    "version": "2.1.0",
+    "license": "MIT",
+    "repository": "markdown-it/uc.micro",
+    "texts": [
+      "third_party/npm/uc.micro/LICENSE.txt"
+    ]
+  },
+  "webgl-sdf-generator": {
+    "version": "1.1.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/lojjic/webgl-sdf-generator.git"
+    },
+    "texts": [
+      "third_party/npm/webgl-sdf-generator/LICENSE.txt"
+    ]
+  },
+  "xlsx": {
+    "version": "0.18.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/SheetJS/sheetjs.git"
+    },
+    "texts": [
+      "third_party/npm/xlsx/LICENSE"
+    ]
+  },
+  "zod": {
+    "version": "4.6.7",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/colinhacks/zod.git"
+    },
+    "texts": [
+      "third_party/npm/zod/LICENSE"
+    ]
+  },
+  "zod-to-json-schema": {
+    "version": "3.25.2",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/StefanTerdell/zod-to-json-schema"
+    },
+    "texts": [
+      "third_party/npm/zod-to-json-schema/LICENSE"
+    ]
+  }
+}

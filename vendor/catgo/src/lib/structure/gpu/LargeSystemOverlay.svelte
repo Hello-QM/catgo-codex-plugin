@@ -1,0 +1,1738 @@
+<script lang="ts">
+  import { Color, type Camera } from 'three'
+  import type { AnyStructure, ElementSymbol } from '$lib/structure'
+  import {
+    get_webgpu_lease,
+    invalidate_webgpu_lease,
+  } from '$lib/structure/gpu/webgpu-context'
+  import { pack_camera_full } from '$lib/structure/gpu/camera-uniform'
+  import {
+    apply_position_overrides,
+    pack_lattice,
+    pack_positions,
+  } from '$lib/structure/gpu/frame-buffers'
+  import { build_display_radii, build_atom_radii } from '$lib/structure/gpu/radius-lut'
+  import { encode_bond_rules, type BondDistanceRuleLike } from '$lib/structure/gpu/bond-rules'
+  import { to_compute_options } from '$lib/structure/gpu/large-system-mode.svelte'
+  import { should_show_bonds } from '$lib/structure/scene'
+  import { DEFAULTS, type ShowBonds } from '$lib/settings'
+  import type { PymatgenLattice } from '$lib/structure'
+  import {
+    create_large_system_renderer,
+    type LargeSystemRenderer,
+  } from '$lib/structure/gpu/large-system-renderer'
+  import {
+    same_visual_shading,
+    type ResolvedVisualState,
+    type ResolvedVisualShading,
+    type VisualStateSource,
+  } from '$lib/structure/rendering/visual-state'
+  import {
+    apply_webgpu_background,
+    apply_webgpu_shading,
+  } from '$lib/structure/rendering/visual-adapters'
+  import { select_packet_atom_colors } from '$lib/structure/rendering/atom-colors'
+  import {
+    apply_view_transform_to_lattice,
+    apply_view_transform_to_origin,
+    apply_view_transform_to_positions,
+    resolve_view_transform,
+  } from '$lib/structure/rendering/view-transform'
+  import {
+    EMPTY_HUD_SAFE_AREA,
+    type HudSafeArea,
+  } from '$lib/structure/rendering/gizmo'
+  import { create_render_packet_builder } from '$lib/structure/scene/render-packet-builder'
+  import type {
+    BaseBondGraph,
+    ImageInstanceTable,
+    RenderPacket,
+    ReplicaSemantics,
+  } from '$lib/structure/scene/render-packet'
+  import type { PacketSyncEvidence } from '$lib/structure/trajectory-presentation-commit'
+  import { logical_site_for_pick } from '$lib/structure/scene/replica-layout'
+  import {
+    expand_ordinary_image_table,
+    type PeriodicDecorationSource,
+  } from '$lib/structure/scene/periodic-decoration-snapshot'
+  import {
+    map_physical_periodic_decoration_to_base,
+    type PhysicalPeriodicDecoration,
+  } from '$lib/structure/scene/physical-supercell-render-source'
+  import {
+    EMPTY_TRAJECTORY_BOND_GRAPH,
+    matching_trajectory_bond_graph,
+  } from './trajectory-bond-snapshot'
+
+  let {
+    enabled = false,
+    camera = undefined,
+    structure = undefined,
+    atom_radius = 1.5,
+    same_size_atoms = false,
+    element_radius_overrides = undefined,
+    site_radius_overrides = undefined,
+    bonding_options = undefined,
+    bond_distance_rules = undefined,
+    bond_thickness = DEFAULTS.structure.bond_thickness,
+    incomplete_periodic_edge_mode = DEFAULTS.structure.incomplete_periodic_edge_mode,
+    incomplete_edge_length_scale = DEFAULTS.structure.incomplete_edge_length_scale,
+    hide_incomplete_bonds = DEFAULTS.structure.hide_incomplete_bonds,
+    image_atom_opacity = 1,
+    show_bonds = `crystals`,
+    show_cell = false,
+    cell_edge_color = DEFAULTS.structure.cell_edge_color,
+    cell_edge_width = DEFAULTS.structure.cell_edge_width,
+    cell_lattice_override = null,
+    show_cell_vectors = DEFAULTS.structure.show_cell_vectors,
+    show_gizmo = DEFAULTS.structure.show_gizmo,
+    frame_positions = undefined,
+    frame_lattice = undefined,
+    prepared_trajectory_packet = null,
+    realtime_position_overrides = null,
+    trajectory_positions_version = undefined,
+    trajectory_step_idx = -1,
+    on_fallback = undefined,
+    selected_sites = [],
+    on_pick = undefined,
+    on_packet_synced = undefined,
+    supercell = [1, 1, 1],
+    replica_semantics = `visual-shared-base`,
+    physical_site_map = undefined,
+    packet_owner_id = 0,
+    periodic_decoration_owner_id = 0,
+    show_image_atoms = false,
+    visual_state_source = null,
+    periodic_decoration_source = null,
+    hud_safe = EMPTY_HUD_SAFE_AREA,
+  }: {
+    enabled?: boolean
+    camera?: Camera | undefined
+    /** BASE scientific structure (never displayed_structure / never appended
+     *  image sites). Exactly N sites define packet topology; visual replicas
+     *  and sparse ghosts are independent GPU instance channels. */
+    structure?: AnyStructure | undefined
+    /** Global display-radius scale, mirrors the WebGL atom_radius prop. */
+    atom_radius?: number
+    /** Render all atoms at the same size (WebGL same_size_atoms). */
+    same_size_atoms?: boolean
+    /** Per-element radius overrides, mirrors the WebGL path. */
+    element_radius_overrides?: Partial<Record<ElementSymbol, number>> | undefined
+    /** Per-site radius overrides, mirrors the WebGL path. */
+    site_radius_overrides?: Map<number, number> | undefined
+    /** App atom_radii options (scale / min_bond_dist / max_bond_dist) driving GPU
+     *  bond detection. Same values the Rust/WASM path receives. */
+    bonding_options?: Record<string, number> | undefined
+    /** Per-element-pair distance rules (the SAME `bond_distance_rules` the WebGL
+     *  path reads). The overlay applies them as a POST-FILTER on the GPU-detected
+     *  bonds, reproducing src/lib/structure/scene/visibility.ts exactly: for a
+     *  detected bond with length d and element pair (eA,eB), if a rule exists for
+     *  the SORTED pair it keeps the bond only when min ≤ d ≤ max, and if no rule
+     *  exists it keeps the bond. Rules can only REMOVE strategy-detected bonds.
+     *  Empty / undefined ⇒ no filtering (behaviour identical to no rules). */
+    bond_distance_rules?:
+      | { element_1: string; element_2: string; min_dist: number; max_dist: number }[]
+      | undefined
+    /** Viewer bond radius and incomplete-periodic-edge controls. These affect
+     *  only the render uniform; they never invalidate the scientific graph. */
+    bond_thickness?: number
+    incomplete_periodic_edge_mode?: boolean
+    incomplete_edge_length_scale?: number
+    hide_incomplete_bonds?: boolean
+    /** The WebGL path also uses image opacity for incomplete periodic stubs. */
+    image_atom_opacity?: number
+    /** Viewer's bond-visibility setting (`never`/`always`/`crystals`/`molecules`),
+     *  mirroring the WebGL path's `scene_props.show_bonds`. The overlay feeds this
+     *  through the SAME `should_show_bonds(show_bonds, lattice)` predicate the
+     *  WebGL view uses to decide whether bonds appear, so the two stay in lockstep:
+     *  when bonds are hidden the overlay skips the GPU bond compute AND the bond
+     *  draw (atoms + cell box still render). Defaults to `crystals` (the app
+     *  default) so an absent prop matches the typical periodic-structure view. */
+    show_bonds?: ShowBonds
+    /** Whether to draw the unit-cell box (lattice wireframe), mirroring the WebGL
+     *  view's `scene_props.show_cell`. Default off ⇒ zero change. Only draws when
+     *  true AND the structure carries a non-zero lattice (periodic). */
+    show_cell?: boolean
+    /** Cell edge line color (hex), mirroring the WebGL Lattice's `cell_edge_color`
+     *  (DEFAULTS.structure.cell_edge_color = `#808080` grey). Converted to linear
+     *  RGB the SAME way atom colors are. */
+    cell_edge_color?: string
+    /** Lattice arrow width follows the same cell-edge-width scale as Lattice.svelte. */
+    cell_edge_width?: number
+    /** Optional scientific/output cell used only for the box and a/b/c arrows.
+     *  A physical true-supercell packet renders with a smaller base lattice,
+     *  while its visible unit cell must remain the full materialized lattice. */
+    cell_lattice_override?: number[][] | null
+    /** Show a/b/c world-space lattice arrows whenever the cell itself is shown. */
+    show_cell_vectors?: boolean
+    /** Mirror the ordinary viewer's orientation-gizmo visibility. */
+    show_gizmo?: boolean
+    /** Direct BASE trajectory frame positions (exactly 3N floats). Never
+     *  derived from the WebGL/displayed renderer. null/undefined falls back to
+     *  the base structure's static site xyz. */
+    frame_positions?: Float32Array | null | undefined
+    /** CURRENT frame lattice for variable-cell trajectories (rows a,b,c).
+     *  null/undefined falls back to the base structure lattice. */
+    frame_lattice?: number[][] | null | undefined
+    /** Exact prepared trajectory snapshot paired with frame_positions. Its bond
+     *  graph is accepted only when both buffers belong to the same frame. */
+    prepared_trajectory_packet?: RenderPacket | null
+    /** Transient base-site xyz replacements produced every animation frame
+     *  while selected atoms are translated or rotated. These are visual-only
+     *  until the interaction controller commits them to `structure`. */
+    realtime_position_overrides?:
+      | ReadonlyMap<number, readonly [number, number, number]>
+      | null
+    /** Per-frame position version, mirroring Structure.svelte's bindable prop.
+     *  `.v` bumps every time the trajectory frame's positions change (playback,
+     *  scrub, or in-place edit) WITHOUT `structure` changing object identity, so
+     *  it — not the structure ref — drives the packet frame version. */
+    trajectory_positions_version?: { v: number; all: boolean } | undefined
+    /** Current trajectory frame index. -1 when no trajectory is active. */
+    trajectory_step_idx?: number
+    on_fallback?: (reason: string) => void
+    /** App selection state (base site indices, same as the WebGL path's
+     *  `selected_sites`). Mirrored into the overlay's GPU highlight buffer so the
+     *  selected atoms glow — kept in sync whether selection changes via an overlay
+     *  click (on_pick) or externally (toolbar, other panes). */
+    selected_sites?: number[]
+    /** Called when the user CLICKS (not drags) an atom in the overlay. `site_idx`
+     *  is the picked atom's base site index, or -1 for empty space (background).
+     *  The parent updates its `selected_sites` from this; the overlay then mirrors
+     *  the new selection into the highlight buffer via the `selected_sites` prop. */
+    on_pick?: ((site_idx: number) => void) | undefined
+    /** Fired after the exact prepared trajectory packet has been uploaded and
+     * submitted by the WebGPU renderer. StructureScene uses this to advance
+     * playback without installing the same frame into legacy CPU managers. */
+    on_packet_synced?: ((evidence: PacketSyncEvidence) => void) | undefined
+    /** GPU supercell factors [nx,ny,nz] (Phase 1). When the product > 1 AND the
+     *  structure has a lattice, the parent keeps `structure` at the BASE cell and
+     *  the overlay instances `base_count × nx·ny·nz` spheres on the GPU, each
+     *  offset by ix·a + iy·b + iz·c. Default [1,1,1] ⇒ ncells = 1 ⇒ atom = inst,
+     *  zero offset ⇒ byte-identical to the non-supercell draw. */
+    supercell?: readonly [number, number, number]
+    /** A true Build supercell can render its base topology by instancing while
+     *  retaining unique physical site ids for editing/export selection. */
+    replica_semantics?: ReplicaSemantics
+    physical_site_map?: Uint32Array
+    /** Parent-issued identity token for `structure` (proxy-safe). */
+    packet_owner_id?: number
+    /** Owner of the materialized ordinary boundary snapshot. This differs from
+     *  packet_owner_id only while a true Build supercell renders through its
+     *  reconstructed base-cell fast path. */
+    periodic_decoration_owner_id?: number
+    /** Viewer `show_image_atoms` policy. true selects packet boundary policy
+     *  `ghost-images`: sparse ghosts draw beyond the outer boundary and outside
+     *  bonds complete to them for ANY visual-supercell dims. false selects
+     *  `stub` (the existing incomplete edge). */
+    show_image_atoms?: boolean
+    /** Revision-bearing visual snapshot source published by StructureScene.
+     *  It is the sole authority for shading, background, resolved atom colors,
+     *  and the view transform. The revision wakes a sleeping loop; resolve() is
+     *  called exactly once by each active frame and that one snapshot drives
+     *  every visual adapter for the frame. */
+    visual_state_source?: VisualStateSource | null
+    /** Final ordinary-mode graph plus aligned boundary atom/decorator
+     *  ownership. Static frames use this instead of running a second
+     *  bond/image algorithm. */
+    periodic_decoration_source?: PeriodicDecorationSource | null
+    /** Pane HUD safe-area insets (CSS px) — the SAME hud_safe StructureScene
+     *  hands its WebGL gizmo (`offset: {left: 5+l, bottom: 5+b}`), so the
+     *  overlay's corner gizmo dodges a docked toolbar identically. */
+    hud_safe?: Readonly<HudSafeArea>
+  } = $props()
+
+  let canvas = $state<HTMLCanvasElement | undefined>(undefined)
+
+  // Active session resources. Kept outside $state — they are imperative GPU
+  // handles, not reactive view data, and we don't want effects to re-run on
+  // mutation. A monotonically increasing token cancels stale async starts.
+  let renderer: LargeSystemRenderer | null = null
+  let raf_id = 0
+  let resize_observer: ResizeObserver | null = null
+  let session_token = 0
+
+  // ── Render-packet channel (design §5) ──────────────────────────────────────
+  // One packet builder per pane. Structure passes the BASE scientific
+  // structure, direct 3N trajectory positions, and CURRENT frame lattice — no
+  // WebGL/displayed reverse read or decorative boundary metadata. The renderer
+  // derives sparse ghosts from the active bond graph at publication. build()
+  // memoizes per sub-object: partial changes bump exactly one version, so the
+  // renderer uploads topology buffers only on a topology change, positions +
+  // current lattice only on a frame change, and dims/policy/indirect counts
+  // only on a replica change. This replaces the old set_atoms / set_positions /
+  // set_supercell / set_show_images fan-out.
+  const packet_builder = create_render_packet_builder()
+  let last_pushed_packet: RenderPacket | null = null
+  let pending_prepared_packet_sync: RenderPacket | null = null
+  let last_reported_prepared_packet: RenderPacket | null = null
+  let last_pushed_atom_images: ImageInstanceTable | null = null
+  let last_pushed_decoration_images: ImageInstanceTable | null = null
+  const EMPTY_IMAGE_TABLE: ImageInstanceTable = {
+    count: 0,
+    base_sites: new Uint32Array(0),
+    jimages: new Int8Array(0),
+  }
+  let expanded_periodic_source:
+    | PeriodicDecorationSource
+    | PhysicalPeriodicDecoration
+    | null = null
+  let expanded_periodic_dims_sig = ``
+  let expanded_periodic_preexpanded = false
+  let expanded_atom_images: ImageInstanceTable = EMPTY_IMAGE_TABLE
+  let expanded_decoration_images: ImageInstanceTable = EMPTY_IMAGE_TABLE
+  let physical_periodic_source: PeriodicDecorationSource | null = null
+  let physical_periodic_map: Uint32Array | null = null
+  let physical_periodic_dims_sig = ``
+  let physical_periodic_base_count = -1
+  let mapped_physical_periodic: PhysicalPeriodicDecoration | null = null
+
+  /** Memoized outer-surface expansion of the ordinary 1× image streams.
+   *  Keeping this at the adapter boundary preserves source identity on idle
+   *  frames and prevents a visual-supercell change from interpreting +1 image
+   *  rows as interior cells. */
+  function resolve_periodic_image_tables(
+    source: PeriodicDecorationSource | PhysicalPeriodicDecoration | null,
+    dims: readonly [number, number, number],
+    preexpanded = false,
+  ): {
+    atom_images: ImageInstanceTable
+    decoration_images: ImageInstanceTable
+  } {
+    if (!source) {
+      expanded_periodic_source = null
+      expanded_periodic_dims_sig = ``
+      expanded_periodic_preexpanded = false
+      expanded_atom_images = EMPTY_IMAGE_TABLE
+      expanded_decoration_images = EMPTY_IMAGE_TABLE
+      return {
+        atom_images: expanded_atom_images,
+        decoration_images: expanded_decoration_images,
+      }
+    }
+    const dims_sig = `${dims[0]},${dims[1]},${dims[2]}`
+    if (
+      source !== expanded_periodic_source ||
+      dims_sig !== expanded_periodic_dims_sig ||
+      preexpanded !== expanded_periodic_preexpanded
+    ) {
+      expanded_periodic_source = source
+      expanded_periodic_dims_sig = dims_sig
+      expanded_periodic_preexpanded = preexpanded
+      expanded_atom_images = preexpanded
+        ? source.atom_images
+        : expand_ordinary_image_table(source.atom_images, dims)
+      expanded_decoration_images = preexpanded
+        ? source.images
+        : expand_ordinary_image_table(source.images, dims)
+    }
+    return {
+      atom_images: expanded_atom_images,
+      decoration_images: expanded_decoration_images,
+    }
+  }
+
+  function resolve_physical_periodic_source(
+    source: PeriodicDecorationSource,
+    map: Uint32Array,
+    dims: readonly [number, number, number],
+    base_count: number,
+  ): PhysicalPeriodicDecoration | null {
+    const dims_sig = `${dims[0]},${dims[1]},${dims[2]}`
+    if (
+      source !== physical_periodic_source ||
+      map !== physical_periodic_map ||
+      dims_sig !== physical_periodic_dims_sig ||
+      base_count !== physical_periodic_base_count
+    ) {
+      physical_periodic_source = source
+      physical_periodic_map = map
+      physical_periodic_dims_sig = dims_sig
+      physical_periodic_base_count = base_count
+      mapped_physical_periodic = map_physical_periodic_decoration_to_base(
+        source,
+        map,
+        dims,
+        base_count,
+      )
+    }
+    return mapped_physical_periodic
+  }
+  let authoritative_packet_source: RenderPacket | null = null
+  let authoritative_graph_source: BaseBondGraph | null = null
+  let authoritative_packet: RenderPacket | null = null
+  let authoritative_bonds_active = false
+
+  function source_matches_owner(
+    source: PeriodicDecorationSource | null,
+    owner_id: number,
+    atom_count: number,
+  ): source is PeriodicDecorationSource {
+    if (!source) return false
+    if (source.owner_id !== owner_id || source.atom_count !== atom_count) {
+      return false
+    }
+    for (let idx = 0; idx < source.graph.pairs.length; idx++) {
+      if (source.graph.pairs[idx] >= atom_count) return false
+    }
+    for (let idx = 0; idx < source.images.count; idx++) {
+      if (source.images.base_sites[idx] >= atom_count) return false
+    }
+    for (let idx = 0; idx < source.atom_images.count; idx++) {
+      if (source.atom_images.base_sites[idx] >= atom_count) return false
+    }
+    return true
+  }
+
+  function attach_authoritative_graph(
+    packet: RenderPacket,
+    graph: BaseBondGraph,
+  ): RenderPacket {
+    if (
+      authoritative_packet &&
+      authoritative_packet_source === packet &&
+      authoritative_graph_source === graph
+    ) return authoritative_packet
+    authoritative_packet_source = packet
+    authoritative_graph_source = graph
+    authoritative_packet = {
+      ...packet,
+      topology: {
+        ...packet.topology,
+        bond_graph: graph,
+      },
+    }
+    return authoritative_packet
+  }
+
+  // Cached atom buffers, rebuilt only when their authoritative inputs change
+  // (not every frame). `atom_source` is the radius identity sentinel. Colors
+  // come ONLY from StructureScene's resolved buffer; this adapter has no
+  // element-palette fallback or second color-resolution path.
+  let atom_source: AnyStructure | undefined = undefined
+  let atom_radii: Float32Array = new Float32Array(0)
+  let atom_colors: Float32Array = new Float32Array(0)
+  let atom_colors_snapshot_source: Float32Array | null | undefined = undefined
+  let atom_colors_snapshot_count = -1
+  // A missing/short publication is a transient bridge state. Preserve the last
+  // confirmed GPU packet and defer all new packet pushes until an authoritative
+  // base-sized color prefix is available.
+  let atom_colors_ready = false
+  // Signature of the radius-affecting inputs we last built from; when it
+  // changes the display radii must be recomputed.
+  let atom_radius_sig = ``
+  // Set when buffers were rebuilt and must be re-uploaded to the GPU.
+  let atoms_dirty = false
+  // Set when the structure IDENTITY or atom COUNT changed (supercell repeats,
+  // structure swap) — i.e. the atom SET itself changed, not just its colors /
+  // display radii. A color/radius-only change flips atoms_dirty (re-upload) but
+  // NOT this. Used to force a full per-frame position re-extract + bond recompute
+  // for the NEW atom set in the SAME frame, instead of waiting for a trajectory
+  // frame event. `topology_count` is the count we last saw, so a supercell that
+  // changes the count (e.g. 1x1x1 -> 3x3x3) is detected even if the structure
+  // object identity comparison alone were insufficient.
+  let topology_dirty = false
+  let topology_count = -1
+
+  // Cached bond inputs, rebuilt only when the structure identity or bonding
+  // options change (not every frame). The renderer caches the compute dispatch
+  // by its own dirty flag; here we just decide WHEN to re-push set_bond_data.
+  let bond_source: AnyStructure | undefined = undefined
+  let bond_covalent: Float32Array = new Float32Array(0)
+  let bond_lattice: Float32Array = new Float32Array(9)
+  let bond_periodic = false
+  let bond_options_sig = ``
+  let bond_compute_opts = { tolerance: 0, max_bond_dist: 0, min_bond_dist: 0 }
+  // Set when bond inputs changed and must be re-pushed to the renderer.
+  let bonds_dirty = false
+
+  // ── Per-element-pair distance-rule state ───────────────────────────────────
+  // Encoded inputs for the GPU rule POST-FILTER (per-atom element ids + packed
+  // rules), rebuilt when the structure identity OR the rules change. Pushed to
+  // the renderer via set_bond_rules; the renderer re-runs the compute so editing
+  // a rule updates the overlay bonds LIVE. Empty rules ⇒ no filtering.
+  let rules_source: AnyStructure | undefined = undefined
+  let rules_sig = ``
+  let rule_elem_ids: Uint32Array = new Uint32Array(0)
+  let rule_packed: Float32Array = new Float32Array(0)
+  // Set when the encoded rules changed and must be re-pushed to the renderer.
+  let rules_dirty = false
+
+  /** Count of HOME (non-image) atoms in the displayed structure — the atoms the
+   *  GPU bond compute must run over, matching the WebGL bond path which computes
+   *  bonds on `bond_input_structure` (= supercell_structure, BEFORE PBC image
+   *  expansion). When `show_image_atoms` is ON, find_pbc_images_fast APPENDS
+   *  boundary replica atoms to displayed_structure.sites (indices ≥
+   *  num_original_sites), each sitting ~one lattice vector OUTSIDE the cell. If
+   *  those replicas were fed into the PERIODIC min-image bond compute (which uses
+   *  the supercell lattice), the search would wrap a replica back across a full
+   *  lattice vector → a bond cylinder spanning the whole supercell = the "spike"
+   *  artefact. The home atoms are always the FIRST num_original_sites entries
+   *  (create_supercell home block first, then find_pbc_images_fast pushes
+   *  replicas after), so slicing the bond inputs to this count feeds the compute
+   *  the exact home-atom set the WebGL path uses. Cross-cell bonds still appear
+   *  via the periodic search's jimage on those home atoms; the replica spheres
+   *  render but never participate in bonding (no double-count, no wrap). When no
+   *  images are present (toggle OFF, or molecule) this is just sites.length. */
+  function bond_home_count(): number {
+    const sites = structure?.sites
+    const n = sites?.length ?? 0
+    const num_orig = (structure as { num_original_sites?: number } | undefined)?.num_original_sites
+    if (typeof num_orig === `number` && num_orig > 0 && num_orig <= n) return num_orig
+    return n
+  }
+
+  /** Cheap signature of the bond_distance_rules array; changes when any rule's
+   *  elements or min/max do, so the GPU post-filter re-encodes + re-dispatches. */
+  function bond_rules_signature(): string {
+    const rs = bond_distance_rules
+    if (!rs || rs.length === 0) return ``
+    let s = ``
+    for (const r of rs) s += `${r.element_1}-${r.element_2}:${r.min_dist},${r.max_dist};`
+    return s
+  }
+
+  /** Re-encode the per-atom element ids + packed rules when the structure identity
+   *  or the rules changed. Pure JS (encode_bond_rules); no-op otherwise. Note the
+   *  elem-id mapping is per-structure, so a structure swap MUST re-encode even if
+   *  the rules text is unchanged. */
+  function rebuild_rules_if_needed(): void {
+    const sig = bond_rules_signature()
+    if (structure === rules_source && sig === rules_sig) return
+    rules_source = structure
+    rules_sig = sig
+    rules_dirty = true
+    const sites = structure?.sites
+    if (!sites || sites.length === 0) {
+      rule_elem_ids = new Uint32Array(0)
+      rule_packed = new Float32Array(0)
+      return
+    }
+    // Encode element ids over the HOME atoms only, in lockstep with bond_covalent
+    // (the compute indexes elem_ids[i]/elem_ids[j] by the same atom index it uses
+    // for radii). Slicing off appended PBC-image replicas keeps the two buffers
+    // the same length (= bond_n) so the per-element-pair rule post-filter stays
+    // aligned with the home-atom bond compute.
+    const home_n = bond_home_count()
+    const bond_sites = home_n < sites.length ? sites.slice(0, home_n) : sites
+    const encoded = encode_bond_rules(
+      bond_sites,
+      (bond_distance_rules ?? []) as BondDistanceRuleLike[],
+    )
+    rule_elem_ids = encoded.elem_ids
+    rule_packed = encoded.rules
+  }
+  // Whether bonds should render at all, decided by the SAME predicate the WebGL
+  // path uses (should_show_bonds against the structure's lattice). When false the
+  // overlay skips the GPU bond compute push AND the renderer skips compute+draw,
+  // so flipping the viewer's show_bonds off clears the overlay's bonds while atoms
+  // + cell box keep rendering. Reactive ⇒ toggling show_bonds repaints live.
+  let bonds_visible = $derived(
+    should_show_bonds(
+      show_bonds,
+      ((structure as { lattice?: PymatgenLattice } | undefined)?.lattice) ?? null,
+    ),
+  )
+  // The enabled-state last pushed to the renderer, so we only call
+  // set_bonds_enabled (+ re-push bond data on re-enable) when it actually flips.
+  let last_bonds_enabled = true
+
+  // ── Cell-box state ───────────────────────────────────────────────────────
+  // Signature of the cell inputs last pushed to the renderer (lattice + show +
+  // color), so set_cell is re-pushed only when one actually changes. The lattice
+  // is read from bond_lattice (kept in lockstep by rebuild_bonds_if_needed and
+  // refresh_frame_positions — including variable-cell trajectories).
+  let cell_sig = ``
+
+  // (GPU supercell dims / base lattice and the show_image_atoms flag are now
+  // carried by the render packet — replica version → dims + boundary policy,
+  // frame version → current lattice. No per-setter sync functions remain.)
+
+  // ── Selection highlight state ──────────────────────────────────────────────
+  // Signature of the selection last pushed to the renderer, so set_selection is
+  // re-uploaded only when selected_sites actually changes (whether from an overlay
+  // click or an external selection change).
+  let selection_sig = ``
+  let bond_style_sig = ``
+  let last_ghost_opacity: number | null = null
+
+  const IDENTITY_VIEW_TRANSFORM = resolve_view_transform(null, null)
+  let current_visual_snapshot: ResolvedVisualState | null = null
+
+  function current_view_transform() {
+    return current_visual_snapshot?.view_transform ?? IDENTITY_VIEW_TRANSFORM
+  }
+
+  /** Push visual-only bond controls without touching packet ownership/compute. */
+  function sync_bond_style(): boolean {
+    if (!renderer) return false
+    const sig = [
+      bond_thickness,
+      incomplete_periodic_edge_mode,
+      incomplete_edge_length_scale,
+      hide_incomplete_bonds,
+      image_atom_opacity,
+    ].join(`|`)
+    if (sig === bond_style_sig) return false
+    bond_style_sig = sig
+    renderer.set_bond_style({
+      radius: bond_thickness,
+      incomplete_edge_mode: incomplete_periodic_edge_mode,
+      incomplete_edge_length_scale,
+      hide_incomplete_bonds,
+      periodic_bond_opacity: image_atom_opacity,
+    })
+    return true
+  }
+
+  /** Mirror sparse image-atom opacity independently from bond style. Both use
+   *  the same viewer control, but the renderer keeps atom opacity in the spare
+   *  Supercell lane and bond opacity in BondU. */
+  function sync_ghost_opacity(): boolean {
+    if (!renderer) return false
+    if (
+      last_ghost_opacity !== null &&
+      Object.is(last_ghost_opacity, image_atom_opacity)
+    ) {
+      return false
+    }
+    last_ghost_opacity = image_atom_opacity
+    renderer.set_ghost_opacity(image_atom_opacity)
+    return true
+  }
+
+  /** Mirror the app's `selected_sites` into the renderer's GPU highlight buffer
+   *  when it changed. Returns true if it re-pushed (caller marks a redraw). */
+  function sync_selection(): boolean {
+    if (!renderer) return false
+    const sig = (selected_sites ?? []).join(`,`)
+    if (sig === selection_sig) return false
+    selection_sig = sig
+    renderer.set_selection(selected_sites ?? [])
+    return true
+  }
+
+  /** Push the unit-cell box to the renderer when its inputs (lattice / show /
+   *  color) changed. Uses bond_lattice as the lattice source (already packed +
+   *  kept current). Returns true if it re-pushed (caller marks a redraw). */
+  function sync_cell(): boolean {
+    if (!renderer) return false
+    const [cr, cg, cb] = hex_to_linear_rgb(cell_edge_color)
+    const vector_colors = [
+      hex_to_linear_rgb(`red`),
+      hex_to_linear_rgb(`green`),
+      hex_to_linear_rgb(`blue`),
+    ] as const
+    const width_scale = cell_edge_width / DEFAULTS.structure.cell_edge_width
+    const origin = apply_view_transform_to_origin(current_view_transform())
+    const raw_cell_lattice =
+      cell_lattice_override && cell_lattice_override.length === 3
+        ? new Float32Array([
+            cell_lattice_override[0][0], cell_lattice_override[0][1],
+            cell_lattice_override[0][2], cell_lattice_override[1][0],
+            cell_lattice_override[1][1], cell_lattice_override[1][2],
+            cell_lattice_override[2][0], cell_lattice_override[2][1],
+            cell_lattice_override[2][2],
+          ])
+        : bond_lattice
+    const visible_cell_lattice = cell_lattice_override
+      ? apply_view_transform_to_lattice(
+          raw_cell_lattice,
+          current_view_transform(),
+        )
+      : raw_cell_lattice
+    let lat_sig = ``
+    for (let i = 0; i < 9; i++) lat_sig += `${visible_cell_lattice[i]};`
+    const sig =
+      `${show_cell}|${cr},${cg},${cb}|` +
+      `${show_cell_vectors}|${width_scale}|` +
+      `${origin[0]},${origin[1]},${origin[2]}|${lat_sig}`
+    if (sig === cell_sig) return false
+    cell_sig = sig
+    // bond_periodic means the structure/current frame carries a lattice; pass
+    // null otherwise so molecules never draw a (degenerate) box.
+    renderer.set_cell(
+      bond_periodic ? visible_cell_lattice : null,
+      show_cell,
+      [cr, cg, cb],
+      origin,
+      {
+        show: show_cell_vectors,
+        width_scale,
+        colors: vector_colors,
+      },
+    )
+    return true
+  }
+
+  // ── Per-frame trajectory state (milestone 9.4) ──────────────────────────
+  // The last position-version we re-extracted. When the parent bumps
+  // trajectory_positions_version.v (playback / scrub / in-place edit) this
+  // diverges and we re-extract ONLY the xyz — the packet's frame version moves
+  // and the renderer uploads only 3N floats; radii and colors are NOT rebuilt,
+  // since elements don't change between frames.
+  let last_pos_version = -1
+  // The last frame index we re-uploaded. Normal playback ADVANCES the frame
+  // index (trajectory_step_idx) without necessarily bumping
+  // trajectory_positions_version.v — that version bumps when the CURRENT frame's
+  // positions change IN PLACE (editing), not on a plain frame advance. So we
+  // must re-extract on EITHER signal diverging, mirroring the CPU/WebGL bond
+  // cache which keys on both get_step_idx AND get_positions_version.
+  let last_step_idx = -1
+  let last_frame_positions_source: Float32Array | null | undefined = undefined
+  let last_frame_lattice_source: number[][] | null | undefined = undefined
+  let last_realtime_position_overrides:
+    | ReadonlyMap<number, readonly [number, number, number]>
+    | null = null
+  // Current BASE-frame xyz (exactly 3N). Identity view transforms consume direct
+  // trajectory arrays zero-copy; non-identity transforms allocate one rotated
+  // frame buffer. A static fallback is packed only when direct input is absent.
+  let packet_frame_positions: Float32Array = new Float32Array(0)
+  let packet_frame_lattice: number[][] | null = null
+  // Local packet frame revision. A view-transform change is a geometry change
+  // even when the trajectory's own position version stays equal.
+  let packet_positions_revision = 0
+  let last_view_transform_sig = ``
+  // Lattice signature last pushed for bonds; for variable-cell trajectories the
+  // lattice changes per frame and the bond compute + bond render need the new
+  // one. Compared per frame so a static cell never re-uploads.
+  let frame_lattice_sig = ``
+
+  /** Adopt the directly-owned BASE frame and apply the WebGL group's view
+   *  transform. The input is exactly 3N floats from Structure; no displayed/
+   *  WebGL reverse read exists. A missing or length-mismatched trajectory frame
+   *  falls back to static site xyz. The direct CURRENT frame lattice is rotated
+   *  into the same packet/bond coordinate space. */
+  function refresh_frame_positions(): void {
+    last_pos_version = trajectory_positions_version?.v ?? -1
+    last_step_idx = trajectory_step_idx
+    last_frame_positions_source = frame_positions
+    last_frame_lattice_source = frame_lattice
+    last_realtime_position_overrides = realtime_position_overrides
+    const view_transform = current_view_transform()
+    last_view_transform_sig = view_transform.signature
+    const sites = structure?.sites
+    if (!sites || sites.length === 0) {
+      packet_frame_positions = new Float32Array(0)
+      packet_frame_lattice = null
+      packet_positions_revision++
+      return
+    }
+    const expected = sites.length * 3
+    const base_positions = frame_positions?.length === expected
+      ? frame_positions
+      : pack_positions(sites)
+    const source_positions = apply_position_overrides(
+      base_positions,
+      realtime_position_overrides,
+    )
+    packet_frame_positions = apply_view_transform_to_positions(
+      source_positions,
+      view_transform,
+    )
+
+    const structure_lattice =
+      (structure as { lattice?: import('$lib/structure').PymatgenLattice }).lattice
+    const packed_source = frame_lattice && frame_lattice.length === 3
+      ? new Float32Array([
+        frame_lattice[0][0], frame_lattice[0][1], frame_lattice[0][2],
+        frame_lattice[1][0], frame_lattice[1][1], frame_lattice[1][2],
+        frame_lattice[2][0], frame_lattice[2][1], frame_lattice[2][2],
+      ])
+      : pack_lattice(structure_lattice)
+    const packed = apply_view_transform_to_lattice(packed_source, view_transform)
+    const has_lattice = !!structure_lattice || frame_lattice?.length === 3
+    packet_frame_lattice = has_lattice
+      ? [
+          [packed[0], packed[1], packed[2]],
+          [packed[3], packed[4], packed[5]],
+          [packed[6], packed[7], packed[8]],
+        ]
+      : null
+    packet_positions_revision++
+    let sig = ``
+    for (let i = 0; i < 9; i++) sig += `${packed[i]};`
+    if (sig !== frame_lattice_sig) {
+      frame_lattice_sig = sig
+      bond_lattice = packed
+      bond_periodic = has_lattice
+      bonds_dirty = true
+    }
+  }
+
+  /** Cheap signature of the bonding options Record; changes when any cutoff
+   *  does so the GPU compute re-dispatches with the new value. */
+  function bond_options_signature(): string {
+    const o = bonding_options
+    if (!o) return ``
+    let s = ``
+    for (const k of Object.keys(o).sort()) s += `${k}=${o[k]};`
+    return s
+  }
+
+  /** Rebuild the bond inputs (covalent radii, lattice, options, periodicity)
+   *  when the structure identity or bonding options change. No-op otherwise. */
+  function rebuild_bonds_if_needed(): void {
+    const sig = bond_options_signature()
+    if (structure === bond_source && sig === bond_options_sig) return
+    bond_source = structure
+    bond_options_sig = sig
+    bonds_dirty = true
+    const sites = structure?.sites
+    if (!sites || sites.length === 0) {
+      bond_covalent = new Float32Array(0)
+      bond_lattice = new Float32Array(9)
+      bond_periodic = false
+      return
+    }
+    // Bond compute runs over HOME atoms only (see bond_home_count): slice off
+    // any appended PBC-image replicas so the periodic min-image search can't wrap
+    // a replica across a full lattice vector → no spikes. Matches the WebGL bond
+    // path (bonds on supercell_structure, replicas drawn but not bonded).
+    const home_n = bond_home_count()
+    const bond_sites = home_n < sites.length ? sites.slice(0, home_n) : sites
+    bond_covalent = build_atom_radii(bond_sites)
+    // Periodic only when the structure carries a lattice (molecules don't).
+    // A variable-cell trajectory's DIRECT current-frame lattice overrides the
+    // base structure lattice here too, including the first rendered frame.
+    const lat = (structure as { lattice?: import('$lib/structure').PymatgenLattice }).lattice
+    const raw_lattice = frame_lattice && frame_lattice.length === 3
+      ? new Float32Array([
+        frame_lattice[0][0], frame_lattice[0][1], frame_lattice[0][2],
+        frame_lattice[1][0], frame_lattice[1][1], frame_lattice[1][2],
+        frame_lattice[2][0], frame_lattice[2][1], frame_lattice[2][2],
+      ])
+      : pack_lattice(lat)
+    bond_lattice = apply_view_transform_to_lattice(
+      raw_lattice,
+      current_view_transform(),
+    )
+    bond_periodic = !!lat || frame_lattice?.length === 3
+    bond_compute_opts = to_compute_options(bonding_options ?? {})
+    // Keep the per-frame lattice signature in lockstep so refresh_frame_positions
+    // doesn't redundantly re-push the lattice it just packed here.
+    let lat_sig = ``
+    for (let i = 0; i < 9; i++) lat_sig += `${bond_lattice[i]};`
+    frame_lattice_sig = lat_sig
+  }
+
+  // Hex -> linear RGB, matching the WebGL path (StructureScene.__hex_to_linear_rgb).
+  // Color.set(hex) ALREADY converts sRGB→linear (three ColorManagement is on by
+  // default), so .r/.g/.b are LINEAR here. An extra .convertSRGBToLinear() —
+  // which this function used to do — applies the transfer curve a SECOND time
+  // and double-darkens every colour: mid-tones collapse (grey #808080 → 0.038
+  // instead of 0.216), which is what made the overlay's cell box and bonds
+  // nearly invisible. The WebGL path hit and fixed this same bug; keep the two
+  // in lockstep.
+  const _col = new Color()
+  function hex_to_linear_rgb(hex: string): [number, number, number] {
+    _col.set(hex)
+    return [_col.r, _col.g, _col.b]
+  }
+
+  // ── Shared visual state ─────────────────────────────────────────────────
+  // The last linear-RGB background pushed to the renderer, so we only re-push
+  // when StructureScene publishes a different resolved triple.
+  let last_bg: [number, number, number] | null = null
+  let last_visual_shading: ResolvedVisualShading | null = null
+
+  /** Push StructureScene's resolved background when it changed. set_background
+   *  accepts linear RGB and performs the one required clear-value encoding. */
+  function sync_background(state: ResolvedVisualState): boolean {
+    if (!renderer) return false
+    const rgb = state.background_linear
+    if (
+      last_bg &&
+      Math.abs(last_bg[0] - rgb[0]) < 1e-6 &&
+      Math.abs(last_bg[1] - rgb[1]) < 1e-6 &&
+      Math.abs(last_bg[2] - rgb[2]) < 1e-6
+    ) {
+      return false
+    }
+    last_bg = rgb
+    apply_webgpu_background(renderer, state)
+    return true
+  }
+
+  /** Resolve one viewer-owned snapshot for this frame, then feed its two thin
+   *  backend adapters. The overlay never inspects DOM or re-resolves CSS. */
+  function sync_visual_state(state: ResolvedVisualState | null): boolean {
+    if (!renderer || !state) return false
+    const background_changed = sync_background(state)
+    let shading_changed = false
+    if (
+      !last_visual_shading ||
+      !same_visual_shading(last_visual_shading, state.shading)
+    ) {
+      last_visual_shading = {
+        ...state.shading,
+        light_dir: [...state.shading.light_dir],
+        depth_bg: [...state.shading.depth_bg],
+      }
+      shading_changed = apply_webgpu_shading(renderer, state)
+    }
+    return shading_changed || background_changed
+  }
+
+  /** Cheap signature of the radius-affecting inputs; changes when any of them
+   *  do so the display radii get recomputed (identity for the override maps,
+   *  size for the site map, values for the element map). */
+  function radius_signature(): string {
+    let sro = ``
+    if (site_radius_overrides && site_radius_overrides.size > 0) {
+      for (const [k, v] of site_radius_overrides) sro += `${k}=${v};`
+    }
+    let ero = ``
+    if (element_radius_overrides) {
+      for (const k of Object.keys(element_radius_overrides)) {
+        ero += `${k}=${(element_radius_overrides as Record<string, number>)[k]};`
+      }
+    }
+    return `${atom_radius}|${same_size_atoms}|${ero}|${sro}`
+  }
+
+  /** Rebuild display radii and adopt StructureScene's authoritative colors.
+   *  Missing/short colors deliberately leave the last confirmed packet live:
+   *  no local palette fallback is constructed and no partially-colored packet
+   *  is uploaded. */
+  function rebuild_atoms_if_needed(
+    resolved_atom_colors: Float32Array | null,
+  ): void {
+    const sig = radius_signature()
+    // Detect a structure-IDENTITY or atom-COUNT change (supercell repeats,
+    // structure swap) BEFORE we overwrite atom_source — independent of the
+    // color/radius-only path below. A new identity OR a changed count means the
+    // atom SET itself changed, so the current per-frame positions + bond compute
+    // are stale for the new set and must be re-extracted/recomputed in THIS
+    // frame (handled by the topology_dirty branch in frame()).
+    const next_count = structure?.sites?.length ?? 0
+    if (structure !== atom_source || next_count !== topology_count) {
+      topology_dirty = true
+      topology_count = next_count
+    }
+    const sites = structure?.sites
+    if (structure !== atom_source || sig !== atom_radius_sig) {
+      atom_source = structure
+      atom_radius_sig = sig
+      atoms_dirty = true
+      atom_radii = sites && sites.length > 0
+        ? build_display_radii(sites, {
+            atom_radius,
+            same_size_atoms,
+            element_radius_overrides,
+            site_radius_overrides,
+          })
+        : new Float32Array(0)
+    }
+
+    if (
+      resolved_atom_colors === atom_colors_snapshot_source &&
+      next_count === atom_colors_snapshot_count
+    ) {
+      return
+    }
+    atom_colors_snapshot_source = resolved_atom_colors
+    atom_colors_snapshot_count = next_count
+    const selected = select_packet_atom_colors(
+      resolved_atom_colors,
+      next_count,
+    )
+    atom_colors_ready = selected !== null
+    if (selected) {
+      atom_colors = selected
+      atoms_dirty = true
+    }
+  }
+
+  function stop_session(): void {
+    session_token++ // invalidate any in-flight get_webgpu_lease()
+    if (raf_id) {
+      cancelAnimationFrame(raf_id)
+      raf_id = 0
+    }
+    if (typeof window !== `undefined`) {
+      if (on_wake_event) {
+        window.removeEventListener(`pointerdown`, on_wake_event)
+        window.removeEventListener(`pointermove`, on_wake_event)
+        window.removeEventListener(`wheel`, on_wake_event)
+        window.removeEventListener(`keydown`, on_wake_event)
+      }
+      if (on_pointer_down) window.removeEventListener(`pointerdown`, on_pointer_down)
+      if (on_pointer_up) window.removeEventListener(`pointerup`, on_pointer_up)
+    }
+    on_wake_event = null
+    on_pointer_down = null
+    on_pointer_up = null
+    resize_observer?.disconnect()
+    resize_observer = null
+    renderer?.destroy()
+    renderer = null
+  }
+
+  // On-demand render state. The rAF loop is self-suspending: it only runs while
+  // there is motion (camera change, atom re-upload, or resize) and goes fully to
+  // sleep — cancelAnimationFrame + raf_id=0, NO further scheduling — once the
+  // camera has been stable for a short grace period. Interaction / data / size
+  // events call wake() to restart it. This keeps the compositor/GPU idle (fan
+  // quiet) when nothing is moving, instead of pinning a perpetual ~60fps tick.
+  let last_camera_uniform: Float32Array | null = null
+  let needs_render = true // force the first frame
+  // Consecutive frames with no change seen so far. When this reaches
+  // STABLE_FRAMES_TO_SLEEP the loop suspends. The grace tail (~0.4s @ 60fps)
+  // lets control inertia/momentum settle before we stop scheduling.
+  let stable_frames = 0
+  const STABLE_FRAMES_TO_SLEEP = 24
+  let observed_visual_revision: number | null = null
+  let has_observed_visual_source = false
+
+  // Bound listener handles, kept so teardown can remove exactly what it added.
+  let on_wake_event: ((ev: Event) => void) | null = null
+
+  // ── Click-to-pick state ────────────────────────────────────────────────────
+  // The overlay canvas is pointer-events:none so camera drags pass through to the
+  // WebGL controls underneath. To pick WITHOUT stealing camera control we watch
+  // window pointerdown/up: a pointerup close to the pointerdown (minimal movement)
+  // is a CLICK ⇒ pick; movement beyond the threshold is a DRAG (camera rotate) ⇒
+  // ignore. We never preventDefault, so the underlying controls always get the
+  // drag. Bound listener handles for exact teardown.
+  let on_pointer_down: ((ev: PointerEvent) => void) | null = null
+  let on_pointer_up: ((ev: PointerEvent) => void) | null = null
+  // pointerdown anchor (client coords) + button, used to classify the gesture.
+  let down_x = 0
+  let down_y = 0
+  let down_button = -1
+  // Max client-pixel movement between down and up that still counts as a click.
+  const CLICK_MOVE_PX = 4
+
+  /** Pick the atom under the given CLIENT (cursor) coords and notify the parent.
+   *  Maps client → canvas-local CSS px → DEVICE px, the space the pick id texture
+   *  is rendered at. The device scale is derived from the ACTUAL backing-store
+   *  size (`canvas.width/height`) over the CSS box (`rect.width/height`), NOT from
+   *  `devicePixelRatio` directly — the renderer sized the backing store to
+   *  `clientWidth * dpr` then floored it, so the true per-axis scale can differ
+   *  slightly from a bare `dpr` (fractional DPR, sub-pixel CSS rounding). Using
+   *  the real ratio keeps the cursor texel exact and matches how `pick()` indexes
+   *  the texture (sized to `canvas.width/height`). Only fires when the cursor is
+   *  over the canvas. Calls on_pick(site_idx) with the picked base site index, or
+   *  -1 for background (empty space) so the parent can clear the selection. */
+  async function pick_at_client(client_x: number, client_y: number): Promise<void> {
+    if (!renderer || !canvas || !on_pick) return
+    const rect = canvas.getBoundingClientRect()
+    // Ignore clicks outside the viewer canvas (e.g. on toolbars / panes).
+    if (
+      client_x < rect.left || client_x > rect.right ||
+      client_y < rect.top || client_y > rect.bottom
+    ) {
+      return
+    }
+    // CSS-px offset within the canvas box, then scale by backing/CSS so the
+    // result lands in the pick texture's device-pixel space exactly.
+    const scale_x = rect.width > 0 ? canvas.width / rect.width : 1
+    const scale_y = rect.height > 0 ? canvas.height / rect.height : 1
+    const x = (client_x - rect.left) * scale_x
+    const y = (client_y - rect.top) * scale_y
+    // Resolve through the packet layout: visual replicas fold to one base id;
+    // true-supercell replicas map to their unique materialized physical site.
+    const result = await renderer.pick(x, y)
+    const replicas = last_pushed_packet?.replicas
+    on_pick(
+      result.kind === `atom` && replicas
+        ? logical_site_for_pick(result, replicas)
+        : -1,
+    )
+  }
+
+  /** True if `next` differs from the last uploaded camera uniform (epsilon
+   *  compare). Updates the cached copy when it returns true. */
+  function camera_changed(next: Float32Array): boolean {
+    const prev = last_camera_uniform
+    if (!prev || prev.length !== next.length) {
+      last_camera_uniform = next.slice()
+      return true
+    }
+    for (let i = 0; i < next.length; i++) {
+      if (Math.abs(prev[i] - next[i]) > 1e-6) {
+        last_camera_uniform = next.slice()
+        return true
+      }
+    }
+    return false
+  }
+
+  function size_to_client(el: HTMLCanvasElement): void {
+    const dpr = typeof window !== `undefined` ? window.devicePixelRatio || 1 : 1
+    const w = el.clientWidth * dpr
+    const h = el.clientHeight * dpr
+    // dpr FIRST: the corner gizmo's placement spec is in CSS px, and resize()
+    // re-derives placement from the stored dpr — a monitor-to-monitor drag
+    // (dpr change) must land before that re-derivation.
+    renderer?.set_gizmo_layout({ dpr })
+    renderer?.resize(w, h)
+    needs_render = true // resized backing store/depth must repaint
+  }
+
+  /** Restart the suspended rAF loop. Resets the stable-frame counter so the
+   *  loop runs for at least a full grace period, and schedules a frame only if
+   *  none is pending and the session is live. Idempotent while already awake. */
+  function wake(): void {
+    if (!enabled || !renderer) return
+    stable_frames = 0
+    if (raf_id === 0) raf_id = requestAnimationFrame(frame)
+  }
+
+  // Token the current loop belongs to. The `frame` closure lives at component
+  // scope (so wake()/listeners can reschedule it) and re-reads this to bail when
+  // its session has been superseded or torn down.
+  let frame_token = 0
+
+  function frame(): void {
+    if (frame_token !== session_token || !renderer) {
+      raf_id = 0
+      return
+    }
+    // Only issue a GPU draw when something changed since the last drawn frame.
+    let dirty = needs_render
+    needs_render = false
+    pending_prepared_packet_sync = null
+    // Resolve the publisher exactly once. This snapshot supplies background,
+    // shading, colors, and the view transform to every adapter below.
+    current_visual_snapshot = visual_state_source?.resolve() ?? null
+
+    // Rebuild the adapter packet inputs (display radii + authoritative colors)
+    // only when the structure / colors / radius inputs changed. The
+    // rebuilt arrays get new identities, so the packet builder below bumps the
+    // topology version and the renderer re-uploads exactly those buffers.
+    rebuild_atoms_if_needed(current_visual_snapshot?.atom_colors_linear ?? null)
+    if (atoms_dirty) {
+      atoms_dirty = false
+      dirty = true
+    }
+    // Structure IDENTITY / atom COUNT changed (supercell repeats, structure
+    // swap): the per-frame POSITION buffer + GPU bond compute are still aligned
+    // to the OLD set — left stale they connect atoms at wrong positions
+    // (garbled bonds/spikes) until a later frame event bumps the version. So
+    // re-extract the CURRENT frame's positions for the NEW set NOW and force a
+    // bond recompute, in this same frame, BEFORE the packet build below. We
+    // reset the version/step trackers first so this forced refresh isn't
+    // skipped by the "≠ last_*" guard, and so the SUBSEQUENT genuine frame
+    // change (≠ these reset values) still triggers refresh_frame_positions
+    // normally.
+    if (topology_dirty) {
+      topology_dirty = false
+      last_pos_version = -1
+      last_step_idx = -1
+      refresh_frame_positions() // refills frame_positions (+ bonds_dirty if lattice moved)
+      bonds_dirty = true // force the GPU bond compute against the consistent new positions
+      dirty = true
+    }
+
+    // Per-frame positions: re-extract ONLY when the trajectory frame moved —
+    // EITHER the frame index advanced (normal playback / single-step / scrub)
+    // OR the current frame's positions changed in place (version bump on edit).
+    if (
+      trajectory_step_idx !== last_step_idx ||
+      (trajectory_positions_version?.v ?? -1) !== last_pos_version ||
+      frame_positions !== last_frame_positions_source ||
+      frame_lattice !== last_frame_lattice_source ||
+      realtime_position_overrides !== last_realtime_position_overrides ||
+      current_view_transform().signature !== last_view_transform_sig
+    ) {
+      refresh_frame_positions()
+    }
+
+    // ── Packet push (design §5): ONE version-gated upload channel replaces the
+    // old set_atoms / set_positions / set_supercell / set_show_images fan-out.
+    // The builder memoizes per sub-object: an unchanged scene returns the
+    // IDENTICAL packet, so this is identity-check cheap on idle frames; a plain
+    // frame advance re-uploads only 3N position floats (+ lattice when the cell
+    // moved); a supercell/policy change touches only replica state (never the
+    // bond graph). Prepared trajectory frames are the exception: positions and
+    // the exact graph were produced as one immutable snapshot, so that graph is
+    // attached below instead of being recomputed after presentation.
+    if (structure && atom_colors_ready) {
+      const dims: [number, number, number] = [
+        Math.max(1, Math.floor(supercell?.[0] ?? 1)),
+        Math.max(1, Math.floor(supercell?.[1] ?? 1)),
+        Math.max(1, Math.floor(supercell?.[2] ?? 1)),
+      ]
+      const base_packet = packet_builder.build({
+        structure,
+        frame_positions: packet_frame_positions.length > 0
+          ? packet_frame_positions
+          : null,
+        frame_lattice: packet_frame_lattice,
+        frame_idx: trajectory_step_idx,
+        positions_version: packet_positions_revision,
+        dims,
+        boundary_policy: show_image_atoms
+          ? `ghost-images`
+          : hide_incomplete_bonds
+            ? `hide`
+            : `stub`,
+        replica_semantics,
+        physical_site_map,
+        colors: atom_colors,
+        radii: atom_radii.length > 0 ? atom_radii : null,
+      })
+      const direct_source = source_matches_owner(
+        periodic_decoration_source,
+        packet_owner_id,
+        base_packet.topology.atom_count,
+      )
+        ? periodic_decoration_source
+        : null
+      const physical_source = direct_source === null &&
+          replica_semantics === `physical-distinct-sites` &&
+          physical_site_map &&
+          source_matches_owner(
+            periodic_decoration_source,
+            periodic_decoration_owner_id,
+            physical_site_map.length,
+          )
+        ? resolve_physical_periodic_source(
+          periodic_decoration_source,
+          physical_site_map,
+          dims,
+          base_packet.topology.atom_count,
+        )
+        : null
+      const source = direct_source ?? physical_source
+      const source_is_preexpanded = physical_source !== null
+      const trajectory_graph = matching_trajectory_bond_graph(
+        prepared_trajectory_packet,
+        frame_positions,
+        trajectory_step_idx,
+        base_packet.topology.atom_count,
+      )
+      // A prepared packet claims trajectory-bond ownership even during a
+      // transient mismatch. Publishing a packet-owned empty graph clears the
+      // old graph and keeps legacy GPU detection disabled, so coordinates and
+      // bonds from different frames are never mixed.
+      const prepared_packet_present = prepared_trajectory_packet !== null
+      if (trajectory_graph !== null && prepared_trajectory_packet !== null) {
+        pending_prepared_packet_sync = prepared_trajectory_packet
+      }
+      const authoritative_graph = prepared_packet_present
+        ? trajectory_graph ?? EMPTY_TRAJECTORY_BOND_GRAPH
+        : source?.graph ?? null
+      const packet = authoritative_graph
+        ? attach_authoritative_graph(base_packet, authoritative_graph)
+        : base_packet
+      const next_authoritative = prepared_packet_present || source !== null
+      if (next_authoritative !== authoritative_bonds_active) {
+        authoritative_bonds_active = next_authoritative
+        bonds_dirty = true
+      }
+      // Static frames retain the ordinary boundary-decorator bridge. A
+      // trajectory packet without matching decorator identity uses its exact
+      // graph jimages and never borrows boundary rows from another frame.
+      const decoration_source = prepared_packet_present ? null : source
+      const {
+        atom_images: packet_atom_images,
+        decoration_images: packet_decoration_images,
+      } = resolve_periodic_image_tables(
+        decoration_source,
+        dims,
+        prepared_packet_present ? false : source_is_preexpanded,
+      )
+      if (
+        packet !== last_pushed_packet ||
+        packet_atom_images !== last_pushed_atom_images ||
+        packet_decoration_images !== last_pushed_decoration_images
+      ) {
+        renderer.set_packet(
+          packet,
+          packet_atom_images,
+          packet_decoration_images,
+        )
+        last_pushed_packet = packet
+        last_pushed_atom_images = packet_atom_images
+        last_pushed_decoration_images = packet_decoration_images
+        dirty = true
+      }
+    }
+
+    // Bond inputs: rebuild on structure/option change, then push to the renderer
+    // (which re-runs the GPU bond compute on its own dirty flag). The packet
+    // push above already marks the renderer graph-dirty when positions moved;
+    // pushing here keeps the covalent radii / count in lockstep with the atoms.
+    // Sync bond visibility (should_show_bonds) to the renderer FIRST. Toggling it
+    // gates the renderer's bond compute pass AND bond draw; a flip always forces a
+    // repaint so bonds appear/disappear immediately. On re-enable, the renderer
+    // flags itself bonds_dirty and we also re-push set_bond_data below so the
+    // compute runs against the current atoms/lattice.
+    if (bonds_visible !== last_bonds_enabled) {
+      last_bonds_enabled = bonds_visible
+      renderer.set_bonds_enabled(bonds_visible)
+      if (bonds_visible) bonds_dirty = true // force a re-push + recompute on enable
+      dirty = true
+    }
+    // Bond inputs: rebuild + push ONLY while bonds are visible. While hidden we
+    // skip the GPU bond compute push entirely (and the renderer skips compute +
+    // draw), so the overlay shows no bonds — atoms + cell box still render. We
+    // still track the rebuild state so the next time bonds turn back on the
+    // changed inputs are re-pushed (bonds_dirty was set on enable above).
+    if (bonds_visible && !authoritative_bonds_active) {
+      rebuild_bonds_if_needed()
+      if (bonds_dirty) {
+        renderer.set_bond_data(bond_covalent, bond_lattice, bond_compute_opts, bond_periodic)
+        bonds_dirty = false
+        dirty = true
+      }
+      // Per-element-pair distance-rule POST-FILTER: re-encode on structure/rule
+      // change and push the per-atom element ids + packed rules. The renderer
+      // re-runs the bond compute so editing a rule updates the overlay LIVE.
+      // Pushed AFTER set_bond_data (which also flags the renderer bonds_dirty),
+      // so a combined change still results in a single recompute next render.
+      rebuild_rules_if_needed()
+      if (rules_dirty) {
+        renderer.set_bond_rules(rule_elem_ids, rule_packed)
+        rules_dirty = false
+        dirty = true
+      }
+    }
+
+    // Image atoms have an independent translucent draw, backed by the spare
+    // Supercell lane. This visual-only sync never claims legacy ownership.
+    if (sync_ghost_opacity()) dirty = true
+
+    // Visual bond style is independent of topology/detection and is packed into
+    // one shared render uniform. Updating it must not claim legacy ownership.
+    if (sync_bond_style()) dirty = true
+
+    // Cell box: push the lattice + show + color to the renderer when any of them
+    // changed. Runs after the bond rebuild above so bond_lattice (the cell's
+    // lattice source) is current for this frame — including variable-cell
+    // trajectories where refresh_frame_positions re-packs it per frame.
+    // (Supercell dims + show_image_atoms travel in the packet above.)
+    if (sync_cell()) dirty = true
+
+    // Selection highlight: mirror the app's selected_sites into the GPU highlight
+    // buffer when it changed (overlay click OR external selection change).
+    if (sync_selection()) dirty = true
+
+    // Visual state: one callback read supplies both the already-resolved linear
+    // background and the shading snapshot. Depth-cue near/far still refresh on
+    // every frame while the camera moves.
+    if (sync_visual_state(current_visual_snapshot)) dirty = true
+
+    // Camera: pack always (cheap), upload + mark dirty only when it moved.
+    if (camera) {
+      camera.updateMatrixWorld()
+      const packed = pack_camera_full(camera)
+      if (camera_changed(packed)) {
+        renderer.set_camera_full(packed)
+        dirty = true
+      }
+    }
+
+    if (dirty) {
+      renderer.render()
+      const synced = pending_prepared_packet_sync
+      if (synced !== null && synced !== last_reported_prepared_packet) {
+        const graph = synced.topology.bond_graph
+        if (graph) {
+          last_reported_prepared_packet = synced
+          on_packet_synced?.({
+            packet: synced,
+            owner: synced.frame.owner,
+            frame_idx: synced.frame.frame_idx,
+            positions_version: synced.frame.positions_version,
+            topology_version: synced.topology.version,
+            graph_version: graph.version,
+            bond_count: graph.pairs.length / 2,
+            atom_renderer_synced: true,
+            bond_renderer_synced: true,
+          })
+        }
+      }
+      stable_frames = 0 // motion this frame ⇒ stay awake
+    } else {
+      stable_frames++
+    }
+
+    // Suspend once the scene has been stable through the grace period: cancel
+    // and stop scheduling entirely. wake() (interaction/data/resize) revives it.
+    if (stable_frames >= STABLE_FRAMES_TO_SLEEP) {
+      raf_id = 0
+      return
+    }
+    raf_id = requestAnimationFrame(frame)
+  }
+
+  async function start_session(el: HTMLCanvasElement): Promise<void> {
+    const token = ++session_token
+    // Fresh renderer => fresh GPU buffers. Force a rebuild + re-upload on the
+    // first frame even if the structure identity hasn't changed since last time.
+    atom_source = undefined
+    atom_colors_snapshot_source = undefined
+    atom_colors_snapshot_count = -1
+    atom_colors_ready = false
+    current_visual_snapshot = null
+    atom_radius_sig = ``
+    atoms_dirty = true
+    // Fresh renderer ⇒ treat the topology as new so the first frame forces a
+    // per-frame position re-extract + bond recompute for the current atom set.
+    topology_dirty = false
+    topology_count = -1
+    // Fresh renderer ⇒ fresh bond buffers; force a rebuild + re-push.
+    bond_source = undefined
+    bond_options_sig = ``
+    bonds_dirty = true
+    // Fresh renderer ⇒ its rule buffers are placeholders; force a re-encode +
+    // re-push of the per-atom element ids + packed rules on the first frame.
+    rules_source = undefined
+    rules_sig = ``
+    rules_dirty = true
+    // Fresh renderer ⇒ its bonds_enabled defaults to true; match that here so the
+    // first frame re-syncs set_bonds_enabled when bonds are currently hidden.
+    last_bonds_enabled = true
+    // Fresh renderer ⇒ force a per-frame re-extract + re-upload on the first
+    // frame, and re-detect the lattice for variable-cell bonds.
+    last_pos_version = -1
+    last_step_idx = -1
+    last_frame_positions_source = undefined
+    last_frame_lattice_source = undefined
+    last_view_transform_sig = ``
+    packet_positions_revision = 0
+    frame_lattice_sig = ``
+    // Fresh renderer ⇒ it has consumed no packet: clear the identity gate so
+    // the (possibly memoized-identical) packet is re-pushed and fully uploads.
+    last_pushed_packet = null
+    pending_prepared_packet_sync = null
+    last_reported_prepared_packet = null
+    last_pushed_atom_images = null
+    last_pushed_decoration_images = null
+    authoritative_packet_source = null
+    authoritative_graph_source = null
+    authoritative_packet = null
+    authoritative_bonds_active = false
+    // Fresh GPU camera buffer ⇒ force a first paint and a re-upload.
+    last_camera_uniform = null
+    // Fresh renderer ⇒ force the background to re-resolve + re-push.
+    last_bg = null
+    last_visual_shading = null
+    // Fresh renderer ⇒ force the cell box to re-resolve + re-push.
+    cell_sig = ``
+    // Fresh renderer ⇒ force visual bond settings into its uniform.
+    bond_style_sig = ``
+    // Fresh renderer ⇒ seed the sparse ghost opacity lane on the first frame.
+    last_ghost_opacity = null
+    // (Supercell dims + show_image_atoms travel in the packet — the cleared
+    // last_pushed_packet above already forces their full re-upload.)
+    // Fresh renderer ⇒ its selection buffer is empty; force a re-push of the
+    // current selection on the first frame.
+    selection_sig = ``
+    needs_render = true
+    stable_frames = 0
+    const lease = await get_webgpu_lease()
+    // Bail if disabled / unmounted / superseded while awaiting.
+    if (token !== session_token) return
+    if (!lease) {
+      on_fallback?.(`Large-system performance mode unavailable on this device — using the standard viewer.`)
+      return
+    }
+    let r: LargeSystemRenderer
+    try {
+      r = create_large_system_renderer(lease.device, el)
+    } catch (err) {
+      on_fallback?.(`Large-system performance mode failed to start — using the standard viewer. (${err instanceof Error ? err.message : String(err)})`)
+      return
+    }
+    renderer = r
+    frame_token = token
+    // Seed the corner-gizmo layout with the pane's current HUD safe-area before
+    // the first size derivation (`renderer` is not reactive state, so the
+    // hud_safe $effect below only covers LATER changes, not this initial value).
+    r.set_gizmo_layout({
+      safe_left: hud_safe.l,
+      safe_bottom: hud_safe.b,
+      show: show_gizmo,
+    })
+    // ── Device-loss transaction (Bonds T6) ─────────────────────────────────
+    // The renderer holds the ONE `device.lost` subscription for this lease
+    // and has already gated every submission (render/pick/setters no-op,
+    // in-flight readbacks discarded) by the time this fires — while RETAINING
+    // the packet/bond-graph owner, so nothing is cleared mid-swap. Here we:
+    //   1. stop this session's rAF loop (no further frame() work);
+    //   2. invalidate exactly THIS lease generation — a stale loss can never
+    //      clobber a newer lease, and a later re-enable acquires fresh;
+    //   3. notify the host EXACTLY ONCE (renderer-enforced). The host's swap
+    //      is atomic: the WebGL2+WASM renderer underneath stays mounted
+    //      (kept-warm canvas, same packet source), so one state flip resumes
+    //      it and unmounts this overlay in a single flush — no frame where
+    //      neither renderer is visible, none where both fight.
+    // Superseded sessions (token mismatch) ignore the stale event entirely.
+    r.on_device_lost(() => {
+      if (token !== session_token) return
+      if (raf_id) {
+        cancelAnimationFrame(raf_id)
+        raf_id = 0
+      }
+      invalidate_webgpu_lease(lease.generation)
+      on_fallback?.(
+        `Large-system WebGPU device was lost — switching to the standard viewer.`,
+      )
+    })
+    // Bond-work wake: candidate bond graphs validate ASYNC after the render
+    // that dispatched them (publication / overflow rerun happen in a LATER
+    // render). This dirty-gated loop suspends on stable frames, so on a
+    // static scene that later render would never come — the first bond graph
+    // (or a rules edit / overflow retry) would starve until the user moved
+    // the camera. The renderer signals each such transition; run one more
+    // dirty frame so it publishes/reruns. Fires once per resolved validation
+    // (never per render), so an idle published graph still lets the loop
+    // settle through the normal grace period. destroy() (stop_session)
+    // unregisters it.
+    r.on_bond_work(() => {
+      needs_render = true
+      wake()
+    })
+    size_to_client(el)
+
+    // Resize: repaint the new backing store and wake the loop if it had slept.
+    resize_observer = new ResizeObserver(() => {
+      if (renderer && canvas) {
+        size_to_client(canvas)
+        wake()
+      }
+    })
+    resize_observer.observe(el)
+
+    // Interaction wake triggers. The overlay canvas is pointer-events:none, so
+    // we listen on `window` (passive — we never preventDefault). Each event just
+    // revives the suspended loop; the frame itself decides whether to redraw.
+    on_wake_event = () => wake()
+    // Click-to-pick: record the pointerdown anchor; on pointerup decide click vs
+    // drag. Only the primary (left) button picks; we never preventDefault so the
+    // underlying WebGL orbit/trackball controls still receive every drag.
+    on_pointer_down = (ev: PointerEvent) => {
+      down_x = ev.clientX
+      down_y = ev.clientY
+      down_button = ev.button
+    }
+    on_pointer_up = (ev: PointerEvent) => {
+      if (ev.button !== 0 || down_button !== 0) return
+      const moved = Math.hypot(ev.clientX - down_x, ev.clientY - down_y)
+      if (moved > CLICK_MOVE_PX) return // a drag (camera rotate) — not a pick
+      // A click: render a fresh pick frame and feed the result to the parent.
+      // (fire-and-forget; the async readback resolves shortly after.)
+      void pick_at_client(ev.clientX, ev.clientY)
+    }
+    if (typeof window !== `undefined`) {
+      window.addEventListener(`pointerdown`, on_wake_event, { passive: true })
+      window.addEventListener(`pointermove`, on_wake_event, { passive: true })
+      window.addEventListener(`wheel`, on_wake_event, { passive: true })
+      window.addEventListener(`keydown`, on_wake_event)
+      window.addEventListener(`pointerdown`, on_pointer_down, { passive: true })
+      window.addEventListener(`pointerup`, on_pointer_up, { passive: true })
+    }
+
+    // First frame: render once and start the loop. It self-suspends after the
+    // grace period if the camera never moves.
+    raf_id = requestAnimationFrame(frame)
+  }
+
+  $effect(() => {
+    // Re-run only on enabled / canvas changes. `camera` is read inside the RAF
+    // loop (not tracked here) so a camera swap doesn't restart the session.
+    if (enabled && canvas) {
+      start_session(canvas)
+      return () => stop_session()
+    }
+    // disabled or no canvas yet: ensure nothing is running.
+    stop_session()
+    return undefined
+  })
+
+  $effect(() => {
+    // Atom-data wake trigger. Track the structure / radius inputs so a
+    // rebuild revives a suspended loop and the new atoms repaint once. Reading
+    // these here (not in the session effect) wakes without restarting the GPU
+    // session. The `frame` does the actual rebuild + upload via
+    // rebuild_atoms_if_needed(). Force the next frame to draw regardless.
+    void [
+      structure,
+      atom_radius,
+      same_size_atoms,
+      element_radius_overrides,
+      site_radius_overrides,
+      bonding_options,
+      bond_distance_rules,
+      periodic_decoration_source,
+    ]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Corner-gizmo safe-area sync: a toolbar dock/undock moves the WebGL gizmo
+    // via its offset — mirror the same insets into the overlay's gizmo and
+    // repaint so the two widgets sit in the same spot. (The initial value is
+    // seeded at renderer creation; this covers changes while the overlay is up.)
+    const safe_left = hud_safe.l
+    const safe_bottom = hud_safe.b
+    const show = show_gizmo
+    if (renderer) {
+      renderer.set_gizmo_layout({ safe_left, safe_bottom, show })
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Per-frame wake trigger. Track the DIRECT base-frame inputs plus their
+    // version/index so playback, scrub, in-place edits, and variable-cell changes
+    // revive a suspended loop. No WebGL resolver participates.
+    void [
+      frame_positions,
+      frame_lattice,
+      prepared_trajectory_packet,
+      trajectory_positions_version?.v,
+      trajectory_step_idx,
+    ]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Selected-atom translation and rotation both publish immutable transient
+    // override maps once per interaction RAF. Wake the WebGPU loop so the next
+    // packet uploads those positions before the pointer is released.
+    void [realtime_position_overrides, realtime_position_overrides?.size]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Semantic visual changes must revive a fully sleeping loop. Comparing the
+    // revision prevents an equal source/state republication from creating a
+    // wake cycle, while a source that arrives after session start wakes once.
+    const source = visual_state_source
+    if (!source) {
+      observed_visual_revision = null
+      has_observed_visual_source = false
+      return
+    }
+    const revision = source.revision
+    if (
+      has_observed_visual_source &&
+      revision === observed_visual_revision
+    ) {
+      return
+    }
+    observed_visual_revision = revision
+    has_observed_visual_source = true
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Bond-style wake trigger. The frame compares a cheap signature and uploads
+    // the render uniform only when a visual setting actually changed.
+    void [
+      bond_thickness,
+      incomplete_periodic_edge_mode,
+      incomplete_edge_length_scale,
+      hide_incomplete_bonds,
+      image_atom_opacity,
+    ]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Bond-visibility wake trigger. Read bonds_visible (derived from show_bonds +
+    // the structure's lattice) so flipping the viewer's "show bonds" setting
+    // revives a suspended loop; the frame syncs set_bonds_enabled and repaints
+    // once — bonds appear/disappear while atoms + cell box stay. Reading the
+    // derived here (not in the session effect) wakes without restarting the GPU
+    // session.
+    void bonds_visible
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Cell-box wake trigger. Track show_cell + cell_edge_color so toggling the
+    // cell on/off or recoloring it revives a suspended loop; the frame re-pushes
+    // via sync_cell and repaints once. (Lattice changes are caught by the
+    // structure/per-frame wakes, which update bond_lattice.)
+    void [show_cell, cell_edge_color, cell_edge_width, show_cell_vectors]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // GPU-supercell wake trigger. Track the supercell dims so changing the
+    // requested supercell (e.g. 1×1×1 → 5×5×5) revives a suspended loop; the
+    // frame's packet build bumps the replica version and repaints once with the
+    // new instance count. (Base-lattice changes are caught by the structure
+    // wake, which also drives the atom/cell rebuilds.)
+    void [supercell[0], supercell[1], supercell[2]]
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // show_image_atoms wake trigger. Track the flag so toggling displayed PBC
+    // image atoms revives a suspended loop; the frame's packet build flips the
+    // boundary policy (replica version bump — replica-only, no bond re-detect)
+    // and repaints once with full-to-image bonds (on) or stubs (off).
+    void show_image_atoms
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+
+  $effect(() => {
+    // Selection wake trigger. Track selected_sites so an external selection change
+    // (toolbar, other panes, or our own on_pick round-trip) revives a suspended
+    // loop; the frame mirrors it into the GPU highlight buffer via sync_selection
+    // and repaints once. Reading it here (not in the session effect) wakes without
+    // restarting the GPU session.
+    void selected_sites
+    if (renderer) {
+      needs_render = true
+      wake()
+    }
+  })
+</script>
+
+{#if enabled}
+  <!-- Visual T6 render-surface marks: while mounted (enabled) this overlay IS
+       the visible renderer — the WebGL canvas below is suspended and marked
+       inactive in the same flush (StructureScene). Raster capture selects by
+       these attributes (scene/render-surface.ts). -->
+  <canvas
+    bind:this={canvas}
+    class="large-system-overlay"
+    data-render-backend="webgpu"
+    data-render-active="true"
+    style="position: absolute; inset: 0; width: 100%; height: 100%;"
+  ></canvas>
+{/if}
+
+<style>
+  .large-system-overlay {
+    display: block;
+    pointer-events: none;
+  }
+</style>
