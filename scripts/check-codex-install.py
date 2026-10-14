@@ -130,7 +130,11 @@ if __name__ == "__main__":
         # Use the native process so cleanup also works on Windows, where a .cmd
         # shim would leave an app-server child behind when terminated.
         candidates = []
-        for pattern in ("@openai/codex*/vendor/*/codex/*",
+        for pattern in ("@openai/codex*/bin/*",
+                        "@openai/codex*/vendor/*/bin/*",
+                        "@openai/codex*/vendor/*/codex/*",
+                        "@openai/codex/node_modules/@openai/codex*/bin/*",
+                        "@openai/codex/node_modules/@openai/codex*/vendor/*/bin/*",
                         "@openai/codex/node_modules/@openai/codex*/vendor/*/codex/*"):
             candidates.extend(path for path in modules.glob(pattern)
                               if path.name in ("codex", "codex.exe"))

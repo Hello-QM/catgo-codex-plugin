@@ -7,6 +7,7 @@ permissions:
 jobs:
   installation:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         codex: ['0.134.0', '0.162.1']
@@ -22,7 +23,7 @@ jobs:
       - run: npm install --prefix .test-codex @openai/codex@${{ matrix.codex }}
       - name: Provide the documented python3 launcher on Windows
         if: runner.os == 'Windows'
-        run: python -c "import pathlib, shutil, sys; shutil.copyfile(sys.executable, pathlib.Path(sys.executable).with_name('python3.exe'))"
+        run: python -c "import pathlib, shutil, sys; launcher = pathlib.Path(sys.executable).with_name('python3.exe'); shutil.copyfile(sys.executable, launcher) if not launcher.exists() else None"
       - run: python scripts/check-codex-install.py --npm-prefix .test-codex
   runtime:
     strategy:
