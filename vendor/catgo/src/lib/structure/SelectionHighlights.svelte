@@ -41,9 +41,11 @@
   import { Color, InstancedBufferAttribute, Matrix4, NormalBlending, Quaternion, ShaderMaterial, SphereGeometry, Vector3 } from 'three'
   import { compute_depth_range, get_depth_color } from './depth-cue-helpers'
   import { VISUAL_RADIUS_SCALE } from './rendering/visual-state'
+  import { visit_atom_instances, type AtomInstanceSource } from './scene/atom-instances'
 
   interface Props {
     structure: AnyStructure | undefined
+    atom_instance_source?: AtomInstanceSource | null
     selected_sites: number[]
     active_sites: number[]
     selection_highlight_color: string
@@ -76,6 +78,7 @@
 
   let {
     structure,
+    atom_instance_source = null,
     selected_sites,
     active_sites,
     selection_highlight_color,
@@ -206,6 +209,7 @@
       : [0, 0]
 
     let write = 0
+    const highlighted_sites = new Set<number>()
     const total_requested = selected_sites.length + active_sites.length
     if (total_requested > max_capacity && import.meta.env?.DEV) {
       // eslint-disable-next-line no-console
@@ -216,9 +220,9 @@
       )
     }
 
-    const write_one = (idx: number, base_color: Color) => {
+    const write_one = (idx: number, base_color: Color, instance_position?: Vec3) => {
       if (write >= max_capacity) return
-      const xyz = realtime_position_overrides?.get(idx)
+      const xyz = instance_position ?? realtime_position_overrides?.get(idx)
         ?? position_by_site_idx.get(idx)
         ?? structure?.sites?.[idx]?.xyz
       if (!xyz) return
@@ -251,22 +255,28 @@
       halo_color_buf[write * 3 + 1] = __scratch_color.g
       halo_color_buf[write * 3 + 2] = __scratch_color.b
       halo_scale_buf[write] = halo_radius
+      highlighted_sites.add(idx)
       write++
     }
 
-    for (let i = 0; i < selected_sites.length; i++) {
-      write_one(selected_sites[i], __selected_color_obj)
+    const write_selection = (indices: number[], color: Color) => {
+      if (!indices.length) return
+      if (atom_instance_source) {
+        visit_atom_instances(atom_instance_source, ({ radius_idx, position }) => {
+          write_one(radius_idx, color, position)
+        }, new Set(indices))
+      } else {
+        for (const idx of indices) write_one(idx, color)
+      }
     }
-    for (let i = 0; i < active_sites.length; i++) {
-      write_one(active_sites[i], __active_color_obj)
-    }
+    write_selection(selected_sites, __selected_color_obj)
+    write_selection(active_sites, __active_color_obj)
     // Hover halo: render only when the cursor is over an atom and that
     // atom isn't already in selected/active (skip duplicate draw).
     if (
       hovered_site_idx !== null &&
       hovered_site_idx !== undefined &&
-      !selected_sites.includes(hovered_site_idx) &&
-      !active_sites.includes(hovered_site_idx)
+      !highlighted_sites.has(hovered_site_idx)
     ) {
       write_one(hovered_site_idx, __selected_color_obj)
     }

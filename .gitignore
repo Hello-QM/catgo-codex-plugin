@@ -8,5 +8,6 @@ plugins/catgo-editor/preview-build-sizes.json
 plugins/catgo-editor/build-inputs.json
 plugins/catgo-editor/build-dependencies.json
 plugins/catgo-editor/tests/document.bundle.*
+plugins/catgo-editor/ui/.test-build/
 .env
 .env.*

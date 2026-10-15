@@ -6,9 +6,11 @@ import { execFileSync } from 'node:child_process'
 import { gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import { checkSlabAlignment } from './check-slab-alignment.mjs'
+import { checkUpstreamUpdates } from './check-upstream-updates.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const slabAlignment = await checkSlabAlignment()
+const upstreamFixes = await checkUpstreamUpdates()
 const scalarWasm = await readFile(slabAlignment.wasmPath)
 delete slabAlignment.wasmPath
 const catgoRoot = process.env.CATGO_SOURCE_ROOT || resolve(root, '../../vendor/catgo')
@@ -110,12 +112,15 @@ await writeFile(resolve(root,'assets/editor.html'),html)
 const sourceReceipt = JSON.parse(await readFile(resolve(catgoRoot,'SOURCE.json'),'utf8').catch(() => JSON.stringify({sourceCommit:execFileSync('git',['-C',catgoRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim()})))
 const version = JSON.parse(await readFile(resolve(root,'plugin.json'),'utf8')).version
 const sourcePatch = await readFile(resolve(root,'patches/slab-preview-bonds.patch'))
-await writeFile(resolve(root,'assets/build-receipt.json'), JSON.stringify({version,catgoCommit:sourceReceipt.sourceCommit,catgoDevCommitReviewed:slabAlignment.commit,slabAlignment,sourcePatchSha256:createHash('sha256').update(sourcePatch).digest('hex'),bundler:'standalone CatGo component/WASM adapter',htmlBytes:Buffer.byteLength(html),programBytes:bytes.length,compressedProgramBytes:compressed.length,chunkCount:manifest.chunks.length,resourceLoading:'MCP resource bridge; gzip chunks',sdk: {'@modelcontextprotocol/ext-apps':'1.7.5','@openai/mcp-extensions':'0.1.0'},runtimeRequiresCatgoCheckout:false},null,2))
+await writeFile(resolve(root,'assets/build-receipt.json'), JSON.stringify({version,catgoCommit:sourceReceipt.sourceCommit,catgoDevCommitReviewed:slabAlignment.commit,slabAlignment,upstreamFixes,sourcePatchSha256:createHash('sha256').update(sourcePatch).digest('hex'),bundler:'standalone CatGo component/WASM adapter',htmlBytes:Buffer.byteLength(html),programBytes:bytes.length,compressedProgramBytes:compressed.length,chunkCount:manifest.chunks.length,resourceLoading:'MCP resource bridge; gzip chunks',sdk: {'@modelcontextprotocol/ext-apps':'1.7.5','@openai/mcp-extensions':'0.1.0'},runtimeRequiresCatgoCheckout:false},null,2))
 console.log(`CatGo entry: ${(Buffer.byteLength(html)/1024).toFixed(0)} KiB; program: ${(compressed.length/1024/1024).toFixed(1)} MiB in ${manifest.chunks.length} MCP resources.`)
 // Bundle the real parsers and state controller for Node tests using the same
 // aliases and definitions as the editor, without a browser or compute backend.
 const documentResult = await build({...options,entryPoints:['ui/document.ts'],outfile:resolve(root,'tests/document.bundle.mjs'),format:'esm',write:true})
 
 recordInputs(documentResult, root)
+await build({...options, entryPoints:['ui/upstream.test.ts'],
+  outfile:resolve(root,'ui/.test-build/upstream.test.mjs'), write:true,
+  external:['vitest']})
 await writeFile(resolve(root,'build-inputs.json'),JSON.stringify([...catgoSourceFiles].filter(file=>file.startsWith(catgoRoot+'/') && !file.includes('/node_modules/')).map(file=>file.slice(catgoRoot.length+1)).sort(),null,2)+'\n')
 await writeFile(resolve(root,'build-dependencies.json'),JSON.stringify(Object.fromEntries([...catgoDependencies].sort()),null,2)+'\n')

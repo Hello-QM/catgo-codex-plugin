@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.10 — 2026-10-15
+
+- Apply catgo-dev `00d4575` and `a42235c`: periodic-image click/box selection,
+  selection-preserving constraint actions, image highlights/frozen indicators,
+  POSCAR quick-export constraints, and CP2K named-KIND parsing. Retain the
+  upstream regression cases and pin the applied files in the build receipt.
+- Send a plain snapshot of selected atoms to the Codex host, avoiding a
+  `postMessage` cloning error from reactive coordinates.
+- Keep the reviewed Miller slab core and scalar WASM, plus the legacy Codex
+  package entrypoints from 0.2.9.
+- The CP2K parser change applies to retained parser code; this release does not
+  add an in-place CP2K input-file editor. CatGo's Windows sidecar process-tree
+  fix is outside this embedded plugin's runtime.
+
 ## 0.2.9 — 2026-10-14
 
 - Add `.codex-plugin/plugin.json` and `.mcp.json` for Codex clients using the

@@ -53,10 +53,14 @@ jobs:
       - run: node plugins/catgo-editor/scripts/build-ui.mjs
       - run: python3 scripts/check-package.py
       - run: node --test plugins/catgo-editor/tests/document.test.mjs
+      - run: npm --prefix plugins/catgo-editor/ui run test:upstream
       - run: node plugins/catgo-editor/tests/mcp-client.mjs
       - run: node plugins/catgo-editor/tests/slab-runtime.mjs
       - run: npx --prefix plugins/catgo-editor/ui playwright install --with-deps chromium
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_PERIODIC_SELECTION: '1'
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:
           CATGO_EDITOR_TEST_SLAB_BONDS: '1'

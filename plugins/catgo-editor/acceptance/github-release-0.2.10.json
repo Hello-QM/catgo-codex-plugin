@@ -1,0 +1,232 @@
+{
+  "version": "0.2.10",
+  "nativeCodexHostVerified": false,
+  "upstreamFixes": {
+    "repository": "https://github.com/Hello-QM/catgo-dev",
+    "commits": [
+      "00d4575bfcbd39cc35029b0f2d8f8fe782c25e7c",
+      "a42235c553a9b6d06b61ed7261d6af60305955ce"
+    ],
+    "reviewedUpstreamHead": "e711e6df7ff5668752b51429dba1097d1c5c8b1e",
+    "sourceChecks": 12
+  },
+  "checks": {
+    "pythonRuntimeTests": 7,
+    "documentTests": 9,
+    "retainedUpstreamTests": 23,
+    "slabSourceChecks": 17,
+    "scalarSlabCases": 17,
+    "officialMcpClient": true,
+    "isolatedCliInstall": "0.162.1"
+  },
+  "browserFlows": {
+    "periodic-selection": {
+      "host": "protocol test harness",
+      "nativeCodexHostVerified": false,
+      "fixture": "water.xyz",
+      "atoms": 3,
+      "entryBytes": 251117,
+      "programResources": 21,
+      "renderedPixels": {
+        "width": 2800,
+        "height": 1712,
+        "colorCount": 181
+      },
+      "selectionChecks": {
+        "realAtoms": 2,
+        "selectedAtoms": 2,
+        "frozenRings": 15,
+        "savePreservesConstraints": true,
+        "exportPreservesConstraints": true
+      },
+      "passed": [
+        "small UI entry",
+        "program loading through MCP resources",
+        "single SDK initialization",
+        "buffered file-open input",
+        "opaque-origin sandbox and CSP",
+        "host file read",
+        "real CatGo 3D pixels rendered",
+        "coordinate edit",
+        "undo/redo",
+        "version-checked write",
+        "saved geometry reparses; atom count and cell preserved",
+        "conflict preserves edits",
+        "Ctrl box selects editable atom IDs without periodic duplicates",
+        "right-click keeps multi-atom selection",
+        "frozen indicators include periodic images",
+        "POSCAR Save and Export retain both constraints",
+        "constraint undo/redo updates image indicators",
+        "visible resource-loading failure"
+      ],
+      "pageErrors": []
+    },
+    "slab-bonds": {
+      "host": "protocol test harness",
+      "nativeCodexHostVerified": false,
+      "fixture": "water.xyz",
+      "atoms": 3,
+      "entryBytes": 251117,
+      "programResources": 21,
+      "renderedPixels": {
+        "width": 2800,
+        "height": 1712,
+        "colorCount": 181
+      },
+      "previewBondChecks": {
+        "miller": [
+          0,
+          0,
+          1
+        ],
+        "supercell": [
+          2,
+          2
+        ],
+        "thickness": 9.01062774,
+        "offset": 1,
+        "vacuum": 15,
+        "atoms": 48,
+        "renderedBonds": 69,
+        "maxBondLength": 3.176706075668335,
+        "maxEndpointError": 2.6883099816814507e-07
+      },
+      "passed": [
+        "small UI entry",
+        "program loading through MCP resources",
+        "single SDK initialization",
+        "buffered file-open input",
+        "opaque-origin sandbox and CSP",
+        "host file read",
+        "real CatGo 3D pixels rendered",
+        "coordinate edit",
+        "undo/redo",
+        "version-checked write",
+        "saved geometry reparses; atom count and cell preserved",
+        "conflict preserves edits",
+        "IrO2 (001) 2\u00d72 preview: 48 atoms and no long full-cell bonds",
+        "every rendered preview bond ends on a visible atom",
+        "Show bonds toggle",
+        "48-atom slab commit and version-checked Save",
+        "visible resource-loading failure"
+      ],
+      "pageErrors": []
+    },
+    "import-slab": {
+      "host": "protocol test harness",
+      "nativeCodexHostVerified": false,
+      "fixture": "water.xyz",
+      "atoms": 3,
+      "entryBytes": 251117,
+      "programResources": 21,
+      "renderedPixels": {
+        "width": 2800,
+        "height": 1712,
+        "colorCount": 181
+      },
+      "slabChecks": {
+        "miller": [
+          1,
+          1,
+          0
+        ],
+        "useConventionalCell": false,
+        "atoms": 10,
+        "cell": [
+          [
+            4.50531387,
+            0,
+            0
+          ],
+          [
+            0,
+            5.51265051,
+            0
+          ],
+          [
+            0,
+            0,
+            18.39757906
+          ]
+        ],
+        "vacuumGap": 14.999999891917621,
+        "surfaceArea": 24.836220803165574,
+        "expectedArea": 24.83622135783933
+      },
+      "passed": [
+        "small UI entry",
+        "program loading through MCP resources",
+        "single SDK initialization",
+        "buffered file-open input",
+        "opaque-origin sandbox and CSP",
+        "host file read",
+        "real CatGo 3D pixels rendered",
+        "coordinate edit",
+        "undo/redo",
+        "version-checked write",
+        "saved geometry reparses; atom count and cell preserved",
+        "conflict preserves edits",
+        "drop imports CIF",
+        "unsaved changes survive drop and Keep editing",
+        "import never writes the previous host file",
+        "import exports a parseable copy",
+        "invalid drops preserve the open structure",
+        "file picker imports extensionless POSCAR",
+        "(110) slab generation through real WASM",
+        "surface-normal cell and 15 \u00c5 vacuum",
+        "slab exports and Undo restores bulk",
+        "slab never writes the previous host file",
+        "host-opened crystal slab commits through version-checked Save",
+        "visible resource-loading failure"
+      ],
+      "pageErrors": []
+    },
+    "conventional-layers": {
+      "host": "protocol test harness",
+      "nativeCodexHostVerified": false,
+      "fixture": "water.xyz",
+      "atoms": 3,
+      "entryBytes": 251117,
+      "programResources": 21,
+      "renderedPixels": {
+        "width": 2800,
+        "height": 1712,
+        "colorCount": 181
+      },
+      "conventionalLayerChecks": {
+        "useConventionalCell": true,
+        "miller": [
+          1,
+          1,
+          0
+        ],
+        "layers": 4,
+        "termination": 0,
+        "atoms": 24,
+        "Ir": 8,
+        "O": 16,
+        "vacuum": 15.000000176184301
+      },
+      "passed": [
+        "small UI entry",
+        "program loading through MCP resources",
+        "single SDK initialization",
+        "buffered file-open input",
+        "opaque-origin sandbox and CSP",
+        "host file read",
+        "real CatGo 3D pixels rendered",
+        "coordinate edit",
+        "undo/redo",
+        "version-checked write",
+        "saved geometry reparses; atom count and cell preserved",
+        "conflict preserves edits",
+        "default conventional-cell conversion",
+        "four-layer (110) cut uses upstream layer semantics",
+        "IrO2 stoichiometry and 15 \u00c5 vacuum",
+        "layer-mode slab saves through the host bridge",
+        "visible resource-loading failure"
+      ],
+      "pageErrors": []
+    }
+  }
+}

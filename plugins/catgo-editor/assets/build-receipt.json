@@ -1,5 +1,5 @@
 {
-  "version": "0.2.9",
+  "version": "0.2.10",
   "catgoCommit": "c72cb350a32855eb5cc7f43b66c2f7d7e8141b8c",
   "catgoDevCommitReviewed": "c1bbd5fa89c372e8e51285fa3b568a403133e68b",
   "slabAlignment": {
@@ -34,11 +34,20 @@
     "scalarWasmSha256": "0158aa88c7f96be302d7c3316210f4168ef79b76d7de05b616678fe77a7ed7ef",
     "scalarGlueSha256": "51e11e15889c21dad2b874313641a5de2dbcc256ba13390c9c2c3f2489cf9806"
   },
+  "upstreamFixes": {
+    "repository": "https://github.com/Hello-QM/catgo-dev",
+    "commits": [
+      "00d4575bfcbd39cc35029b0f2d8f8fe782c25e7c",
+      "a42235c553a9b6d06b61ed7261d6af60305955ce"
+    ],
+    "reviewedUpstreamHead": "e711e6df7ff5668752b51429dba1097d1c5c8b1e",
+    "sourceChecks": 12
+  },
   "sourcePatchSha256": "3a0b087fb58791b72ede43652b91455f45000aace0dc14a9646319cb64d12fa3",
   "bundler": "standalone CatGo component/WASM adapter",
-  "htmlBytes": 251113,
-  "programBytes": 25859825,
-  "compressedProgramBytes": 8082731,
+  "htmlBytes": 251117,
+  "programBytes": 25863379,
+  "compressedProgramBytes": 8085408,
   "chunkCount": 21,
   "resourceLoading": "MCP resource bridge; gzip chunks",
   "sdk": {

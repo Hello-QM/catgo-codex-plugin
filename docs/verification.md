@@ -23,3 +23,9 @@ The direct WASM suite covers 17 slab scenarios. The periodic bond UI test checks
 
 The tests use disposable structures. They do not submit scientific jobs or
 overwrite a user's existing structure.
+
+Version 0.2.10 adds the 23 retained upstream periodic-selection/constraint and
+CP2K KIND cases. The periodic-selection browser case checks Ctrl-box selection,
+sending editable atom IDs to the host, right-click selection preservation,
+periodic frozen indicators, POSCAR Save/Export constraints, and undo/redo.
+This remains a protocol-harness check; native Windows rendering is separate.

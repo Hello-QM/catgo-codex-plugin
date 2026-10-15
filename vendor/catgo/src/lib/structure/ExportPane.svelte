@@ -12,7 +12,7 @@
     download_file,
   } from '$lib/structure/export/common-export'
   import {
-    structure_to_poscar, structure_to_xyz,
+    structure_to_xyz,
     type StructureData,
   } from '$lib/structure/export/offline-serialize'
   import { select_active_render_canvas } from '$lib/structure/scene/render-surface'
@@ -325,7 +325,7 @@
   function quick_export_poscar() {
     if (!structure) return
     try {
-      const text = structure_to_poscar(structure as unknown as StructureData)
+      const text = exports.structure_to_poscar_str(structure)
       const name = (structure as any)?.formula || (structure as any)?.id || `structure`
       download_file(text, `${name}_POSCAR`)
     } catch (e) {

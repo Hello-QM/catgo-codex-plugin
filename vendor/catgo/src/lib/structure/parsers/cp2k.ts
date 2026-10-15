@@ -7,7 +7,7 @@ import {
 } from './common'
 
 // Parse CP2K .inp / .restart files
-// Extracts &CELL and &COORD blocks to build a ParsedStructure
+// Resolves &COORD kind names through &KIND before applying atom-index constraints.
 export function parse_cp2k(content: string): ParsedStructure | null {
   try {
     // Strip # and ! comments (but not inside strings)
@@ -27,6 +27,14 @@ export function parse_cp2k(content: string): ParsedStructure | null {
     let cell_depth = 0
     let coord_depth = 0
 
+    interface KindDefinition {
+      element?: string
+      magnetization?: number
+    }
+    const kinds = new Map<string, KindDefinition>()
+    let current_kind: KindDefinition | null = null
+    let kind_depth = 0
+
     // Track &CONSTRAINT > &FIXED_ATOMS blocks
     let in_constraint = false
     let constraint_depth = 0
@@ -42,6 +50,25 @@ export function parse_cp2k(content: string): ParsedStructure | null {
     for (const line of lines) {
       const trimmed = line.trim().toUpperCase()
       if (!trimmed) continue
+
+      // KIND sections commonly follow COORD. Collect all definitions first;
+      // nested BS/DFT_PLUS_U sections must not end or overwrite the parent kind.
+      if (current_kind) {
+        if (/^&\w/.test(trimmed) && !trimmed.startsWith(`&END`)) {
+          kind_depth++
+        } else if (/^&END\b/.test(trimmed)) {
+          if (kind_depth > 0) kind_depth--
+          else current_kind = null
+        } else if (kind_depth === 0) {
+          const [key, value] = trimmed.split(/\s+/)
+          if (key === `ELEMENT` || key === `ELEMENT_SYMBOL`) {
+            current_kind.element = value
+          } else if (key === `MAGNETIZATION` && value !== undefined) {
+            current_kind.magnetization = parse_coordinate(value)
+          }
+        }
+        continue
+      }
 
       // Track &FIXED_ATOMS inside &CONSTRAINT (innermost)
       if (in_fixed_atoms) {
@@ -143,6 +170,14 @@ export function parse_cp2k(content: string): ParsedStructure | null {
         coord_depth = 0
         continue
       }
+      if (/^&KIND\b/.test(trimmed)) {
+        const name = trimmed.split(/\s+/)[1]
+        if (name) {
+          current_kind = {}
+          kind_depth = 0
+          kinds.set(name, current_kind)
+        }
+      }
     }
 
     if (coord_lines.length === 0) {
@@ -239,28 +274,34 @@ export function parse_cp2k(content: string): ParsedStructure | null {
       }
 
       const tokens = trimmed.split(/\s+/)
-      if (tokens.length < 4) continue
+      if (tokens.length < 4) {
+        throw new Error(`Incomplete CP2K coordinate: ${trimmed}`)
+      }
 
-      // Format: Element x y z (or with optional extra columns)
-      const element_str = tokens[0]
-      // Validate element symbol: starts with letter, 1-3 chars
-      if (!/^[A-Za-z]{1,3}$/.test(element_str)) continue
-
-      const element = (element_str.charAt(0).toUpperCase() +
-        element_str.slice(1).toLowerCase()) as ElementSymbol
-
-      if (!elem_symbols.includes(element)) continue
+      // COORD starts with a KIND name, not necessarily an element symbol.
+      // Explicit ELEMENT wins (even for arbitrary aliases such as spin_up).
+      // Without it, accept element names with numeric/separator suffixes.
+      const kind_name = tokens[0]
+      const kind = kinds.get(kind_name.toUpperCase())
+      const element_str = kind?.element
+        ?? kind_name.match(/^([A-Za-z]{1,2})(?=$|[^A-Za-z])/)?.[1]
+      const element = element_str && (element_str.charAt(0).toUpperCase() +
+        element_str.slice(1).toLowerCase()) as ElementSymbol | undefined
+      if (!element || !elem_symbols.includes(element)) {
+        throw new Error(`Cannot resolve CP2K kind '${kind_name}' to an element`)
+      }
 
       let xyz: Vec3
       let abc: Vec3 = [0, 0, 0]
-      try {
-        xyz = [
-          parse_coordinate(tokens[1]),
-          parse_coordinate(tokens[2]),
-          parse_coordinate(tokens[3]),
-        ]
-      } catch {
-        continue
+      xyz = [
+        parse_coordinate(tokens[1]),
+        parse_coordinate(tokens[2]),
+        parse_coordinate(tokens[3]),
+      ]
+      // Never drop an unreadable atom: LIST uses the original COORD order,
+      // so a shortened structure would silently freeze a different atom.
+      if (!xyz.every(Number.isFinite)) {
+        throw new Error(`Invalid CP2K coordinate: ${trimmed}`)
       }
 
       if (is_scaled && lattice_matrix) {
@@ -283,7 +324,12 @@ export function parse_cp2k(content: string): ParsedStructure | null {
         abc,
         xyz,
         label: `${element}${atom_idx}`,
-        properties: {},
+        properties: {
+          cp2k_kind: kind_name,
+          // This is an input guess, not a converged magnetic moment.
+          ...(kind?.magnetization !== undefined
+            ? { cp2k_magnetization: kind.magnetization } : {}),
+        },
       })
     }
 

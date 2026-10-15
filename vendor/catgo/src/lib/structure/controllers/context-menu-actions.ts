@@ -22,7 +22,7 @@
 import type { AnyStructure, ElementSymbol, Vec3 } from '$lib'
 import type { AtomArrayInverse } from '$lib/structure/state/selection-state.svelte'
 import { add_atom, delete_atoms, replace_atom } from '$lib/structure/atom-manipulation'
-import { get_orig_site_idx } from '$lib/structure/atom-properties'
+import { logical_site_for_display } from '$lib/structure/scene/atom-instances'
 import type {
   AtomAddSpec,
   AtomFastOps,
@@ -150,17 +150,20 @@ export function create_context_menu_actions(deps: ContextMenuDeps) {
 
     if (!map_images) return raw_indices
 
-    // 映射 image / supercell replica 原子到基础胞原子。
-    // get_orig_site_idx 统一处理三种情况:supercell replica(orig_unit_cell_idx)、
-    // PBC image(orig_site_idx)、普通原子(site_idx)。supercell 下显示结构比可编辑
-    // 基础胞大,必须折叠回基础胞索引,否则约束等操作命中越界索引而失效。
+    // Periodic images share an editable atom; real Build-supercell atoms keep
+    // their own indices, even when they carry original-cell provenance.
     const displayed = deps.get_displayed_structure() as any
-    const mapped = raw_indices.map((idx) =>
-      get_orig_site_idx(displayed?.sites?.[idx], idx),
-    )
+    const original = (idx: number) => displayed ? logical_site_for_display(displayed, idx) : idx
+    const selected_originals = selected.map(original)
+    const original_target = target === null ? null : original(target)
+    // Right-clicking an image of a selected atom must keep the whole box
+    // selection as the constraint target, rather than silently freezing one.
+    const mapped = original_target === null || selected_originals.includes(original_target)
+      ? selected_originals
+      : [original_target]
     const structure = deps.get_structure()
     const max_idx = structure?.sites?.length ?? 0
-    return [...new Set(mapped.filter((idx) => idx < max_idx))]
+    return [...new Set(mapped.filter((idx) => idx >= 0 && idx < max_idx))]
   }
 
   /**

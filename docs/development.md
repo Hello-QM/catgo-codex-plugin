@@ -14,6 +14,7 @@ node plugins/catgo-editor/scripts/build-ui.mjs
 python3 scripts/check-package.py
 python3 -m unittest discover -s plugins/catgo-editor/tests -v
 node --test plugins/catgo-editor/tests/document.test.mjs
+npm --prefix plugins/catgo-editor/ui run test:upstream
 node plugins/catgo-editor/tests/mcp-client.mjs
 node plugins/catgo-editor/tests/slab-runtime.mjs
 ```
@@ -25,6 +26,7 @@ cd plugins/catgo-editor/ui
 npx playwright install chromium
 cd ../../..
 node plugins/catgo-editor/tests/editor.browser.mjs
+CATGO_EDITOR_TEST_PERIODIC_SELECTION=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_SLAB_BONDS=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_IMPORT_AND_SLAB=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS=1 node plugins/catgo-editor/tests/editor.browser.mjs
@@ -33,6 +35,11 @@ CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS=1 node plugins/catgo-editor/tests/editor.b
 The variable syntax above is for POSIX shells. Tests use Playwright's installed
 Chromium by default; `CATGO_TEST_BROWSER` can select an existing browser executable.
 Every test owns and closes its local HTTP server and browser.
+
+The upstream test bundle runs the retained catgo-dev selection/constraint and
+CP2K KIND cases with the same Svelte compilation used by the editor. Vitest and
+happy-dom are development dependencies only. `references/catgo-dev-updates.json`
+records the applied upstream commits; the build checks those source files.
 
 The root `plugin.json` and `mcp.json` are canonical. After metadata changes, run
 `python3 scripts/sync-codex-compat.py` to regenerate the legacy Codex overlay

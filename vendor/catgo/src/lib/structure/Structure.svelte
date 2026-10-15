@@ -24,6 +24,7 @@
   import { create_supercell_request_handler } from '$lib/structure/workers/supercell-worker-api'
   import { create_render_packet_builder } from '$lib/structure/scene/render-packet-builder'
   import type { RenderPacket } from '$lib/structure/scene/render-packet'
+  import type { AtomInstanceSource } from './scene/atom-instances'
   import type { PacketSyncEvidence } from '$lib/structure/trajectory-presentation-commit'
   import type { PeriodicDecorationSource } from '$lib/structure/scene/periodic-decoration-snapshot'
   import {
@@ -284,6 +285,7 @@
   let scene_periodic_decoration_source =
     $state<PeriodicDecorationSource | null>(null)
   let scene_camera_revision = $state(0)
+  let scene_atom_instance_source = $state.raw<AtomInstanceSource | null>(null)
 
   function note_scene_camera_change(revision_before: number) {
     // orbit_controls.update() may synchronously emit its own change event through
@@ -2153,9 +2155,8 @@
   let saved_selection: number[] | null = null
   let last_normalized_selection = $state<number[]>([])
 
-  // NOTE: Removed auto-remap $effect that was causing selection to jump from
-  // image atoms to original atoms. Now image atoms stay selected visually,
-  // but manipulation is only allowed on original atoms (like ASE GUI behavior).
+  // Selection uses editable atom IDs. Rendered periodic images inherit their
+  // original's selection; edit helpers also accept legacy displayed indices.
 
   // Image atom helpers — delegate to pure functions in controllers/transform-controller.ts
   function is_image_atom(idx: number): boolean {
@@ -3212,6 +3213,7 @@
     set_structure: (s) => { structure = s as typeof structure },
     get_displayed_structure: () => displayed_structure,
     get_selected_sites: () => selected_sites,
+    get_atom_instance_source: () => scene_atom_instance_source,
     set_selected_sites: (s) => { selected_sites = s },
     get_camera: () => camera,
     get_wrapper: () => wrapper,
@@ -3693,6 +3695,8 @@
   onmouseleave={() => (hovered = false)}
   onpointerdowncapture={interaction.handleShiftClickCapture}
   onpointerupcapture={interaction.handlePointerUpCapture}
+  onclickcapture={interaction.handleSelectionClickCapture}
+  ondblclickcapture={interaction.handleSelectionClickCapture}
   oncontextmenu={(event) => {
     const target = event.target as HTMLElement
     if (target.closest(`.draggable-pane`) || target.closest(`.chat-panel`) || target.closest(`.structure-legend`) || target.closest(`.control-buttons`)) return
@@ -4935,6 +4939,7 @@
             bind:atom_manager={scene_atom_manager}
             bind:visual_state_source={scene_visual_state_source}
             bind:periodic_decoration_source={scene_periodic_decoration_source}
+            bind:atom_instance_source={scene_atom_instance_source}
             bind:camera_revision={scene_camera_revision}
             deleted_bond_keys={pencil.deleted_bond_keys}
             bind:selected_bonds={pencil.selected_bonds}

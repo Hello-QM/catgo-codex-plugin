@@ -221,6 +221,7 @@
   // here; R7 moved that consumer into SelectionHighlights.svelte. No
   // direct callers remain in this file.
   import SelectionHighlights from './SelectionHighlights.svelte'
+  import { logical_site_for_display, type AtomInstanceSource } from './scene/atom-instances'
 
   // R6: selection-highlight pulse. The original (pre-c4155f44) opacity
   // pulse animated the wireframe spheres around selected/active atoms.
@@ -904,6 +905,7 @@
     visual_state_source = $bindable<VisualStateSource | null>(null),
     periodic_decoration_source =
       $bindable<PeriodicDecorationSource | null>(null),
+    atom_instance_source = $bindable<AtomInstanceSource | null>(null),
     bond_owner_id = 0,
     // Camera matrices are mutable Three objects, so their internal changes are
     // invisible to Svelte. The owner binds this explicit revision and every
@@ -1235,6 +1237,7 @@
     visual_state_source?: VisualStateSource | null
     /** Final graph plus separate ordinary atom/decorator image sets. */
     periodic_decoration_source?: PeriodicDecorationSource | null
+    atom_instance_source?: AtomInstanceSource | null
     /** Parent-issued identity token for the current pre-image bond input. */
     bond_owner_id?: number
     /** Explicit revision for mutable camera/controls changes. */
@@ -2296,7 +2299,11 @@
     // suspended. Reactive: toggle-OFF restores normal click selection.
     if (webgl_suspended) return
 
-    const result = toggle_site_selection(site_index, selected_sites)
+    const logical_index = structure ? logical_site_for_display(structure, site_index) : site_index
+    const logical_selection = structure
+      ? [...new Set(selected_sites.map(idx => logical_site_for_display(structure, idx)))]
+      : selected_sites
+    const result = toggle_site_selection(logical_index, logical_selection)
     if (result === null) {
       console.warn(
         `Selection size limit reached (${measure.MAX_SELECTED_SITES}). Deselect some sites first.`,
@@ -5966,6 +5973,17 @@
     return !!dims && dims[0] * dims[1] * dims[2] > 1
   })
 
+  // Selection and indicators share the renderer's periodic instances, including
+  // packet-owned images which are absent from structure.sites.
+  $effect(() => {
+    atom_instance_source = structure ? {
+      structure,
+      packet: manager_render_packet,
+      images: manager_packet_boundary_atom_images,
+      position_overrides: realtime_position_overrides,
+    } : null
+  })
+
   function packet_render_features_eligible(): boolean {
     const features = {
       atom_opacity_overrides: merged_atom_opacity_overrides.size,
@@ -7730,6 +7748,7 @@
            for the per-instance matrix + color rebuild logic. -->
       <SelectionHighlights
         {structure}
+        {atom_instance_source}
         selected_sites={selected_sites ?? []}
         active_sites={active_sites ?? []}
         hovered_site_idx={camera_is_moving ? null : hovered_idx}
@@ -7783,7 +7802,7 @@
       />
 
       {#if structure?.sites}
-        <FrozenAtomIndicators sites={structure.sites} {all_radii_by_site_idx} {atom_radius} />
+        <FrozenAtomIndicators sites={structure.sites} {atom_instance_source} {all_radii_by_site_idx} {atom_radius} />
       {/if}
 
       <!-- NOTE: Removed selection order labels (1, 2, 3, ...) for measured sites per user request -->

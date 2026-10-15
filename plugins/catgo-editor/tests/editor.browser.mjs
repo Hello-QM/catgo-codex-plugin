@@ -24,7 +24,7 @@ const initial=parseDocument(input,filename)
 const escapeHtml=value=>value.replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))
 const scriptJson=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 const host=`<!doctype html><html><body style="margin:0;font:14px system-ui;background:#eee"><div style="padding:8px">Test host · CatGo file editor · ${escapeHtml(filename)}</div><iframe id="editor" title="CatGo file editor" sandbox="allow-scripts allow-downloads" src="/editor" style="width:100%;height:calc(100vh - 36px);border:0"></iframe><script>
-const record={text:${scriptJson(input)},etag:'v1',writes:[],exports:[],resourceReads:[],events:[],forceConflict:false,programReads:[]};window.testRecord=record;
+const record={text:${scriptJson(input)},etag:'v1',writes:[],exports:[],contexts:[],resourceReads:[],events:[],forceConflict:false,programReads:[]};window.testRecord=record;
 const broken=new URLSearchParams(location.search).has('missing-resource');
 const frame=document.getElementById('editor');
 const send=message=>frame.contentWindow.postMessage({jsonrpc:'2.0',...message},'*');
@@ -44,7 +44,8 @@ window.addEventListener('message',async event=>{
   result={contents:[await (await fetch('/resource?uri='+encodeURIComponent(message.params.uri))).json()]};
  }
  else if(message.method==='resources/read'&&message.params.uri==='host-resource://fixture')result={contents:[{uri:'host-resource://fixture',mimeType:'text/plain',text:record.text,_meta:{'openai/resource':{writable:true,etag:record.etag}}}]};
- else if(message.method==='resources/subscribe'||message.method==='resources/unsubscribe'||message.method==='ui/update-model-context')result={};
+ else if(message.method==='ui/update-model-context'){record.contexts.push(message.params);result={};}
+ else if(message.method==='resources/subscribe'||message.method==='resources/unsubscribe')result={};
  else if(message.method==='ui/download-file'){record.exports.push(message.params);result={};}
  else if(message.method==='openai/resources/write'){
   if(record.forceConflict||message.params.ifMatch!==record.etag)result={outcome:'conflict',etag:'external-v2'};
@@ -126,6 +127,65 @@ try {
  let slabChecks
  let previewBondChecks
  let conventionalLayerChecks
+ let selectionChecks
+ if(process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION){
+  const text=await readFile(resolve(root,'tests/fixtures/Si_periodic_constraints.poscar'),'utf8')
+  await page.evaluate(text=>{
+   const record=window.testRecord;record.text=text;record.etag='selection-v1';record.forceConflict=false
+   document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'periodic-selection.poscar',resourceUri:'host-resource://fixture'}}}},'*')
+  },text)
+  await editor.getByRole('button',{name:'Discard and open',exact:true}).click()
+  await editor.locator('header strong').filter({hasText:'periodic-selection.poscar'}).waitFor()
+  const canvas=editor.locator('canvas[data-render-active="true"]')
+  const bounds=await canvas.boundingBox()
+  const selectAll=async()=>{
+   await page.keyboard.down('Control')
+   await page.mouse.move(bounds.x+8,bounds.y+80)
+   await page.mouse.down()
+   await page.mouse.move(bounds.x+bounds.width-8,bounds.y+bounds.height-8,{steps:10})
+   await page.mouse.up()
+   await page.keyboard.up('Control')
+  }
+  await selectAll()
+  await editor.getByRole('button',{name:'Send selection',exact:true}).click()
+  await page.waitForFunction(()=>window.testRecord.contexts.length>0)
+  const selectedAtoms=await page.evaluate(()=>window.testRecord.contexts.at(-1).structuredContent.selectedAtoms)
+  assert.deepEqual(selectedAtoms.map(atom=>atom.index).sort((a,b)=>a-b),[1,2])
+  // The host toolbar is outside Structure's click-outside selection boundary.
+  // Start a fresh selection before exercising its canvas context menu.
+  await selectAll()
+  await canvas.click({button:'right',position:{x:bounds.width/2,y:bounds.height/2}})
+  await editor.getByText('Freeze all axes',{exact:true}).click()
+  const frame=page.frames().find(frame=>frame.url().endsWith('/editor'))
+  await frame.waitForFunction(()=>{
+   let rings=0;document.querySelector('canvas[data-render-active="true"]')?.__scene?.traverse(object=>{if(object.geometry?.type==='TorusGeometry')rings++})
+   return rings>6
+  })
+  const frozenRings=await canvas.evaluate(canvas=>{
+   let rings=0;canvas.__scene.traverse(object=>{if(object.geometry?.type==='TorusGeometry')rings++});return rings
+  })
+  await editor.getByRole('button',{name:'Save',exact:true}).click()
+  await page.waitForFunction(()=>window.testRecord.writes.length===2)
+  const written=await page.evaluate(()=>window.testRecord.writes[1])
+  assert.equal(written.ifMatch,'selection-v1')
+  const reopened=parseDocument(written.text,'periodic-selection.poscar')
+  assert.equal(reopened.sites.length,2)
+  assert.deepEqual(reopened.sites.map(site=>site.properties.selective_dynamics),[[false,false,false],[false,false,false]])
+  await editor.getByRole('button',{name:'Export',exact:true}).click()
+  await page.waitForFunction(()=>window.testRecord.exports.length>0)
+  const exported=await page.evaluate(()=>window.testRecord.exports.at(-1).contents[0].resource.text)
+  assert.deepEqual(parseDocument(exported,'export.poscar').sites.map(site=>site.properties.selective_dynamics),[[false,false,false],[false,false,false]])
+  await editor.getByRole('button',{name:'Undo',exact:true}).click()
+  await frame.waitForFunction(()=>{
+   let rings=0;document.querySelector('canvas[data-render-active="true"]')?.__scene?.traverse(object=>{if(object.geometry?.type==='TorusGeometry')rings++});return rings===0
+  })
+  await editor.getByRole('button',{name:'Redo',exact:true}).click()
+  await frame.waitForFunction(()=>{
+   let rings=0;document.querySelector('canvas[data-render-active="true"]')?.__scene?.traverse(object=>{if(object.geometry?.type==='TorusGeometry')rings++});return rings>6
+  })
+  selectionChecks={realAtoms:2,selectedAtoms:selectedAtoms.length,frozenRings,savePreservesConstraints:true,exportPreservesConstraints:true}
+  extraPassed.push('Ctrl box selects editable atom IDs without periodic duplicates','right-click keeps multi-atom selection','frozen indicators include periodic images','POSCAR Save and Export retain both constraints','constraint undo/redo updates image indicators')
+ }
  if(process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS){
   const crystalText=await readFile(resolve(root,'tests/fixtures/IrO2_bulk_test.cif'),'utf8')
   await page.evaluate(text=>{
@@ -337,12 +397,12 @@ try {
   extraPassed.push('host-opened crystal slab commits through version-checked Save')
  }
  const directory=resolve(root,'preview');await mkdir(directory,{recursive:true})
- const suffix=process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? '-conventional-layers' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? '-slab-bonds' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? '-import-slab' : fixture ? '-'+filename.replace(/[^A-Za-z0-9_.-]/g,'_') : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? '-hidden-constructor' : process.env.CATGO_EDITOR_TEST_NO_GPU ? '-unavailable-gpu' : process.env.CATGO_EDITOR_TEST_NARROW ? '-narrow' : ''
+ const suffix=process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? '-periodic-selection' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? '-conventional-layers' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? '-slab-bonds' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? '-import-slab' : fixture ? '-'+filename.replace(/[^A-Za-z0-9_.-]/g,'_') : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? '-hidden-constructor' : process.env.CATGO_EDITOR_TEST_NO_GPU ? '-unavailable-gpu' : process.env.CATGO_EDITOR_TEST_NARROW ? '-narrow' : ''
  await page.screenshot({path:resolve(directory,'editor-acceptance'+suffix+'.png'),fullPage:false})
  // A denied or incomplete program must produce a visible error, not a blank panel.
  await page.goto(`http://127.0.0.1:${server.address().port}/?missing-resource`,{waitUntil:'domcontentloaded'})
  await page.frameLocator('#editor').getByRole('alert').filter({hasText:'Missing program resource'}).waitFor()
- await writeFile(resolve(directory,process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? 'browser-conventional-layers.json' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? 'browser-slab-bonds.json' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? 'browser-import-slab.json' : fixture ? 'browser-'+filename+'.json' : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? 'browser-hidden-constructor.json' : process.env.CATGO_EDITOR_TEST_NO_GPU ? 'browser-unavailable-gpu.json' : process.env.CATGO_EDITOR_TEST_NARROW ? 'browser-narrow-acceptance.json' : 'browser-acceptance.json'),JSON.stringify({host:'protocol test harness',nativeCodexHostVerified:false,fixture:filename,atoms:initial.sites.length,cellVolume:initial.lattice?.volume,entryBytes:Buffer.byteLength(html),programResources:manifest.chunks.length,renderedPixels:pixels,slabChecks,previewBondChecks,conventionalLayerChecks,passed:['small UI entry','program loading through MCP resources','single SDK initialization','buffered file-open input','opaque-origin sandbox and CSP','host file read',process.env.CATGO_EDITOR_TEST_NO_GPU ? 'unavailable graphics API is reported; editing remains usable' : 'real CatGo 3D pixels rendered','coordinate edit','undo/redo','version-checked write','saved geometry reparses; atom count and cell preserved','conflict preserves edits',...extraPassed,'visible resource-loading failure'],pageErrors:errors},null,2))
+ await writeFile(resolve(directory,process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? 'browser-periodic-selection.json' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? 'browser-conventional-layers.json' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? 'browser-slab-bonds.json' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? 'browser-import-slab.json' : fixture ? 'browser-'+filename+'.json' : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? 'browser-hidden-constructor.json' : process.env.CATGO_EDITOR_TEST_NO_GPU ? 'browser-unavailable-gpu.json' : process.env.CATGO_EDITOR_TEST_NARROW ? 'browser-narrow-acceptance.json' : 'browser-acceptance.json'),JSON.stringify({host:'protocol test harness',nativeCodexHostVerified:false,fixture:filename,atoms:initial.sites.length,cellVolume:initial.lattice?.volume,entryBytes:Buffer.byteLength(html),programResources:manifest.chunks.length,renderedPixels:pixels,slabChecks,previewBondChecks,conventionalLayerChecks,selectionChecks,passed:['small UI entry','program loading through MCP resources','single SDK initialization','buffered file-open input','opaque-origin sandbox and CSP','host file read',process.env.CATGO_EDITOR_TEST_NO_GPU ? 'unavailable graphics API is reported; editing remains usable' : 'real CatGo 3D pixels rendered','coordinate edit','undo/redo','version-checked write','saved geometry reparses; atom count and cell preserved','conflict preserves edits',...extraPassed,'visible resource-loading failure'],pageErrors:errors},null,2))
  if(errors.length)throw Error(errors.join('; '))
  console.log('Browser acceptance passed: read → edit → undo/redo → save; external conflict preserves edits.')
 } catch (error) {

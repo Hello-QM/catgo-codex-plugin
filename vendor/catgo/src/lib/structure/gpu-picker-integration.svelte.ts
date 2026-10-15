@@ -737,12 +737,14 @@ export function setup_hover_detection(
   const targets_canvas_surface = (target: EventTarget | null): boolean =>
     target === canvas || target === canvas.parentElement
   function handle_pointer_down(event: PointerEvent) {
-    if (!targets_canvas_surface(event.target)) return
+    if (event.button !== 0 || !targets_canvas_surface(event.target)) return
     click_down_x = event.clientX
     click_down_y = event.clientY
   }
   function handle_pointer_up(event: PointerEvent) {
-    if (!targets_canvas_surface(event.target)) return
+    // Opening the context menu must preserve the box selection it acts on.
+    // Right/middle releases are camera/menu gestures, not selection clicks.
+    if (event.button !== 0 || !targets_canvas_surface(event.target)) return
     const packet = deps.get_render_packet?.() ?? null
     if (packet === null || replica_picker === undefined) return
     if (

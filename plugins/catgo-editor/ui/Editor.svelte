@@ -148,7 +148,7 @@
   }
   async function shareSelection() {
     if (state.file && structure) {
-      try { await host.context(state.file, structure, selected); status = 'Selection attached to Codex context' }
+      try { await host.context(state.file, $state.snapshot(structure), $state.snapshot(selected)); status = 'Selection attached to Codex context' }
       catch (cause) { error = (cause as Error).message }
     }
   }

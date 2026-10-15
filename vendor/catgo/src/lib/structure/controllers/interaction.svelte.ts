@@ -51,6 +51,7 @@ import {
 import type { ElementSymbol } from '$lib'
 import type { AtomManipulationEvent } from '../index'
 import type { GestureConfig } from '$lib/gesture/gesture-types'
+import { atoms_in_screen_box, type AtomInstanceSource } from '../scene/atom-instances'
 
 // ─── 模块级状态: 追踪最后交互的 wrapper，用于 Ctrl+C/V 路由到正确的 pane ───
 let _active_interaction_wrapper: HTMLElement | null = null
@@ -63,6 +64,7 @@ export interface InteractionDeps {
   get_structure: () => AnyStructure | undefined
   set_structure: (s: AnyStructure) => void
   get_displayed_structure: () => AnyStructure | undefined
+  get_atom_instance_source?: () => AtomInstanceSource | null
   get_selected_sites: () => number[]
   set_selected_sites: (s: number[]) => void
 
@@ -344,6 +346,10 @@ export function create_interaction_controller(deps: InteractionDeps) {
   // -1 → the parent would clear the selection the box just set. The parent reads
   // this stamp and suppresses that one clear. -Infinity = never box-selected.
   let last_box_select_commit_ms = $state(-Infinity)
+  // A browser click/dblclick can follow the very pointerup which committed a
+  // box. Consume that gesture's click, without a timer that blocks the next
+  // intentional atom click (or keyboard activation of a control).
+  let suppress_box_gesture_click = false
 
   // ═══════════════════════════════════════════════════════════════════
   // 裁剪导出状态 — 绘制矩形区域 → 导出 PNG → 退出
@@ -1203,10 +1209,22 @@ export function create_interaction_controller(deps: InteractionDeps) {
     // Commit box-select + finish atom drag/rotation on pointerup. On touch this
     // is the only "up" that fires (mouseup is mouse-only); `onmouseup` is
     // idempotent (guarded by is_box_selecting / is_dragging_atom / is_rotating_atoms).
+    const was_box_selecting = is_box_selecting
     onmouseup()
+    if (was_box_selecting) {
+      event.stopPropagation()
+      event.preventDefault()
+    }
+  }
+
+  function handleSelectionClickCapture(event: MouseEvent) {
+    if (!suppress_box_gesture_click || event.detail === 0) return
+    event.stopPropagation()
+    event.preventDefault()
   }
 
   function handleShiftClickCapture(event: PointerEvent) {
+    suppress_box_gesture_click = false
     const wrapper = deps.get_wrapper()
 
     // Touch long-press opens the context menu (cancelled on move/up below).
@@ -1340,14 +1358,11 @@ export function create_interaction_controller(deps: InteractionDeps) {
     // 框选结束
     if (is_box_selecting && box_select_start && box_select_end && deps.get_structure()) {
       const structure = deps.get_structure()!
-      const atoms_in_box: number[] = []
-      for (let idx = 0; idx < structure.sites.length; idx++) {
-        const site = structure.sites[idx]
-        const screen_pos = project_to_screen(site.xyz as [number, number, number])
-        if (screen_pos && is_in_rect(screen_pos, box_select_start!, box_select_end!)) {
-          atoms_in_box.push(idx)
-        }
-      }
+      const source = deps.get_atom_instance_source?.()
+        ?? { structure: deps.get_displayed_structure() ?? structure }
+      const atoms_in_box = atoms_in_screen_box(
+        source, project_to_screen, box_select_start, box_select_end,
+      ).filter(idx => idx >= 0 && idx < structure.sites.length)
 
       const new_selection = [...deps.get_selected_sites()]
       for (const idx of atoms_in_box) {
@@ -1380,6 +1395,7 @@ export function create_interaction_controller(deps: InteractionDeps) {
       // the parent. Stamp even when the box caught nothing — a Cmd/Ctrl+drag that
       // selected zero atoms must still NOT be reinterpreted as a clear-all click.
       last_box_select_commit_ms = (typeof performance !== `undefined` ? performance.now() : Date.now())
+      suppress_box_gesture_click = true
 
       is_box_selecting = false
       box_select_start = null
@@ -1711,6 +1727,7 @@ export function create_interaction_controller(deps: InteractionDeps) {
     // ── 事件处理器 (绑定到 template) ──
     handleShiftClickCapture,
     handlePointerUpCapture,
+    handleSelectionClickCapture,
     oncontextmenu,
     on_atom_context_menu,
 
