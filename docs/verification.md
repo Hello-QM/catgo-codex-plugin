@@ -5,10 +5,21 @@ actual right-panel file editor. A synthetic two-Si structure visibly changed
 its boundary bonds at Stub Length 1.0/0.5 and when stub mode was disabled and
 re-enabled. All four comparison captures used the same camera. A private
 157-atom structure also rendered, and its original/copy SHA256 checks matched.
+A follow-up with a fresh disposable copy verified native coordinate editing,
+Undo/Redo before Save, actual host-file Save and reading the saved coordinates
+back in a new native file tab. Independent disk parsing checked the edit,
+cell, species/counts and all selective-dynamics flags at the eight-decimal
+POSCAR export precision. The protected original's SHA256 and modification time
+were unchanged; no reinstall or runtime change was made.
 See the [native screenshots and reproduction steps](native-host-0.2.11.md)
-and [versioned native receipt](../plugins/catgo-editor/acceptance/native-host-0.2.11.json).
-This check did not edit coordinates or exercise native Save, undo/redo or
-non-Linux host rendering.
+and separate [rendering receipt](../plugins/catgo-editor/acceptance/native-host-0.2.11.json)
+and [editing/save receipt](../plugins/catgo-editor/acceptance/native-edit-save-0.2.11.json).
+The private follow-up is a maintainer-reported result with local evidence.
+Native non-Linux rendering, save-conflict UI, keyboard shortcuts and undo/redo
+across Save remain unverified. The follow-up also recorded a hidden-tab startup
+diagnostic and a side-panel automation interruption; reopening in the active
+chat completed the persistence check without an alert. See the native report
+for these limits.
 
 Version 0.2.11 adds a real-browser boundary-bond regression. A periodic Si pair
 with no drawn image atoms produces two 1 Å stubs at scale 1, two 0.5 Å stubs
@@ -27,8 +38,9 @@ The release contains two kinds of evidence:
 
 The historical native confirmations listed above apply to earlier development
 versions; the separate 0.2.11 native receipt covers only the checks described
-at the top of this page. Neither establishes coverage of later releases,
-other operating systems or native saves. The browser harness identifies itself
+at the top of this page, with editing/save coverage in its follow-up receipt.
+These records do not establish coverage of later releases or other operating
+systems. The browser harness identifies itself
 as a protocol test host; it is not the Codex desktop app. Receipts are retained
 under the plugin's `acceptance/` directory, with new results separately recorded.
 

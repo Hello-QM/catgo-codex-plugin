@@ -40,6 +40,9 @@ launches Codex before installing. The shipped launcher uses that command;
   changes at 1.0 and 0.5; see the [screenshots and reproduction steps](docs/native-host-0.2.11.md).
 - Use undo/redo. **Save** writes a host-opened writable file with a version check;
   conflicts keep pending edits. **Export** saves an edited copy.
+  Native Codex Linux acceptance of 0.2.11 also verified coordinate editing,
+  Undo/Redo before Save, disk persistence and reopening on a fresh disposable
+  157-atom copy; see the [acceptance report](docs/native-host-0.2.11.md).
 - Import through **Open** or drag/drop, when allowed by the host. Imported copies
   use **Export**; they do not overwrite the previously opened host file.
 - Open **Build Tools → Slab** to cut by Miller indices, choose thickness/layers,

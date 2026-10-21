@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.11",
+  "checkedAt": "2026-10-21T22:46:33.107138+00:00",
+  "result": "pass",
+  "scope": "Native coordinate editing, Undo/Redo before Save, host-file Save and reopening a fresh disposable private structure copy.",
+  "host": {
+    "application": "Codex desktop",
+    "version": "26.1016.51333",
+    "platform": "Linux",
+    "surface": "native right-panel file editor"
+  },
+  "programSha256": "871de4d4b989f9926ebc2943e7a1777a479a8c9ab1223f2d79cc8818a3990bbd",
+  "nativeCodexHostVerified": true,
+  "nativeCoordinateEditVerified": true,
+  "nativeUndoRedoVerified": true,
+  "nativeSaveVerified": true,
+  "nativeReopenReadVerified": true,
+  "fixture": {
+    "atoms": 157,
+    "freshDisposableCopy": true,
+    "initialCopyMatchedOriginalSHA256": true,
+    "private": true
+  },
+  "coordinateEdit": {
+    "route": "Coordinates -> Apply coordinates",
+    "editedAtoms": 1,
+    "cartesianDisplacementAngstrom": [0.1, 0, 0],
+    "dirtyStateAndUndoSaveEnabled": true,
+    "diskCopyUnchangedBeforeSave": true
+  },
+  "undoRedo": {
+    "route": "native Undo and Redo buttons before Save",
+    "coordinatePanelReopenedToReadGeometry": true,
+    "undoRestoredInitialCoordinatesAndCleanState": true,
+    "redoRestoredEditedCoordinatesAndDirtyState": true,
+    "acrossSaveVerified": false,
+    "keyboardShortcutsVerified": false
+  },
+  "save": {
+    "route": "native Save button through the host writable file-resource bridge",
+    "diskHashChanged": true,
+    "independentPOSCARParsingVerified": true,
+    "intendedDisplacementVerified": true,
+    "otherCoordinatesUnchangedWithinExportPrecision": true,
+    "fractionalDecimalPlaces": 8,
+    "maxCartesianRoundingDifferenceAngstrom": 2.059596688752663e-7,
+    "cellDerivedRoundingBoundAngstrom": 2.0881737575e-7,
+    "speciesAndCountsUnchanged": true,
+    "cellUnchanged": true,
+    "allSelectiveDynamicsFlagsUnchanged": true,
+    "footer": "Saved · 157 atoms",
+    "saveDisabledAfterSuccess": true,
+    "nativeConflictUIVerified": false
+  },
+  "reopen": {
+    "newNativeFileTab": true,
+    "coordinatesMatchedSavedDiskFile": true,
+    "renderingVerified": true,
+    "errorAlerts": [],
+    "footer": "Saved · 157 atoms",
+    "saveDisabled": true,
+    "freshUndoRedoHistory": true
+  },
+  "sourceProtection": {
+    "originalSHA256Unchanged": true,
+    "originalModificationTimeUnchanged": true,
+    "testCopyRetainsTestEdit": true
+  },
+  "intermediateObservations": [
+    "The initial hidden-tab mount retained a size 0 x 0 initialization diagnostic after the atoms became visible at a nonzero canvas size. Its records were retained locally.",
+    "The side-panel automation connection stopped responding after the first successful Save. No post-save Undo/Redo result is claimed. Reopening the saved file in the active chat restored interaction, read the disk coordinates and showed no error alert.",
+    "These observations do not establish a fix for hidden-tab startup diagnostics or uninterrupted automation across Save."
+  ],
+  "evidenceAvailability": "Maintainer-reported private-fixture result. Raw structures, screenshots, DOM states, hashes and semantic comparisons are retained locally. No private coordinates, screenshot, local path or session identifier is distributed.",
+  "priorRenderingReceipt": "plugins/catgo-editor/acceptance/native-host-0.2.11.json",
+  "otherOperatingSystemsVerified": false,
+  "runtimeChanged": false,
+  "releaseVersionChanged": false,
+  "reinstalled": false,
+  "documentation": "docs/native-host-0.2.11.md"
+}

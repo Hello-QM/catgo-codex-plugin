@@ -15,6 +15,13 @@
   separate native receipt. A private 157-atom structure also rendered; its
   coordinates and screenshot remain local. This acceptance update does not
   change the runtime or release version.
+- Extend native Linux acceptance with a fresh disposable 157-atom copy:
+  coordinate editing, Undo/Redo before Save, host-file Save and rereading the
+  saved coordinates in a new native tab. Check disk geometry at POSCAR export
+  precision, species/counts, cell and selective-dynamics flags; retain the
+  protected original's SHA256 and modification time. Record the initial
+  hidden-tab diagnostic and automation interruption, followed by an alert-free
+  reopen, in a separate receipt. No reinstall or runtime change was needed.
 
 ## 0.2.10 — 2026-10-15
 

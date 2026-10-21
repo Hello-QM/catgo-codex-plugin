@@ -57,6 +57,13 @@ host-code patch was needed to complete that native check. A host without the
 file-entrypoint capability still cannot provide that bridge; imported copies
 through **Open** use **Export**, not host-file Save.
 
+The 0.2.11 follow-up also observed a hidden tab retaining a `size: 0 × 0`
+initialization diagnostic after atoms became visible. Keep the intended file
+tab selected in the active chat. After confirming any edits are saved to disk,
+close and reopen that file if needed. The recorded follow-up reopened without
+an alert and read the saved coordinates back; this is a recovery observation,
+not a runtime fix or a reason to reinstall the plugin.
+
 ## Missing program-manifest.json after updating
 
 A chat may retain a server from a removed plugin cache version. Refresh its

@@ -33,6 +33,8 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
   0.2.11 已在 Linux 的 Codex 右侧原生编辑器中验证 1.0/0.5 及开关的画布变化，
   见[现场截图与复现步骤](docs/native-host-0.2.11.md)。
 - 从 Codex 打开的可写文件可用 **Save** 保存；保存检查文件版本，冲突时保留编辑。
+  0.2.11 已用全新的 157 原子测试副本完成 Linux 原生坐标编辑、保存前撤销/重做、
+  实际落盘及重新打开读取核验，原件哈希和修改时间未变，详见[验收记录](docs/native-host-0.2.11.md)。
 - **Open** 和拖入的结构作为副本编辑，通过 **Export** 导出。
 - **Build Tools → Slab** 支持 Miller 指数、厚度/层数、终止面、面内超胞、
   conventional cell 和真空层。结果是几何切割结构，不包含弛豫或能量计算。
