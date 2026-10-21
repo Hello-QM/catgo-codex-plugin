@@ -1,5 +1,19 @@
 # Verification scope
 
+Version **0.2.12** adds a lifecycle regression against the real bundled editor
+and official SDK in the protocol test host: hidden startup beyond the old
+three-second deadline, repeated hide/show, resource updates before a write
+acknowledgement and after Save, continued Undo/Redo and duplicate file input.
+It asserts one SDK initialization and one resource subscription across those
+operations, and checks that a truly changed external version still loads.
+Controlled file reads and unsubscribe acknowledgements also verify that rapid
+file switching keeps the latest requested document subscribed to updates.
+The unavailable-GPU case verifies that genuine graphics errors remain visible.
+See the [fix report](lifecycle-fix-0.2.12.md) and
+[versioned receipt](../plugins/catgo-editor/acceptance/lifecycle-fix-0.2.12.json).
+These browser tests are not native Codex GUI evidence; native follow-up must be
+recorded separately with the loaded program hash.
+
 Native Codex Linux acceptance of **0.2.11** was completed on 2026-10-21 in the
 actual right-panel file editor. A synthetic two-Si structure visibly changed
 its boundary bonds at Stub Length 1.0/0.5 and when stub mode was disabled and

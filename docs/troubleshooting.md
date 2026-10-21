@@ -57,7 +57,11 @@ host-code patch was needed to complete that native check. A host without the
 file-entrypoint capability still cannot provide that bridge; imported copies
 through **Open** use **Export**, not host-file Save.
 
-The 0.2.11 follow-up also observed a hidden tab retaining a `size: 0 × 0`
+Fixed in **0.2.12**: the initialization check waits for a visible layout and
+rechecks in the same tab when its size or visibility changes. Actual WebGL
+exceptions are still reported. See the [lifecycle fix](lifecycle-fix-0.2.12.md).
+
+The earlier 0.2.11 follow-up observed a hidden tab retaining a `size: 0 × 0`
 initialization diagnostic after atoms became visible. Keep the intended file
 tab selected in the active chat. After confirming any edits are saved to disk,
 close and reopen that file if needed. The recorded follow-up reopened without
@@ -86,6 +90,12 @@ two-Si boundary case; it does not hide every bond. See the
 [native comparison](native-host-0.2.11.md) and its public synthetic fixture.
 
 ## Save is unavailable or reports a conflict
+
+Version 0.2.12 also fixes delayed notifications of the editor's own Save
+resetting history and closing the coordinates panel. Matching saved versions
+now retain the current document; truly changed disk versions still refresh or
+show the external-change notice. Repeated input for the same file no longer
+restarts its editor state.
 
 Save requires a host-opened writable resource and version token. Imported copies
 use **Export**. For external file changes, keep/export pending edits and reopen

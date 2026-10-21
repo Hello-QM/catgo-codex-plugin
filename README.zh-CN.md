@@ -28,6 +28,9 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
 
 ## 功能
 
+0.2.12 修复隐藏标签的初始化误报，以及自身保存通知导致的文档重载和撤销历史丢失。
+无需通过反复重开标签恢复编辑，见[修复与验证范围](docs/lifecycle-fix-0.2.12.md)。
+
 - 原子、化学键、晶胞的 3D 显示、选择与坐标编辑，支持撤销和重做。
 - 在 **Controls → Bonds** 中调整 **Cell-edge stub bonds** 和 **Stub Length**。
   0.2.11 已在 Linux 的 Codex 右侧原生编辑器中验证 1.0/0.5 及开关的画布变化，

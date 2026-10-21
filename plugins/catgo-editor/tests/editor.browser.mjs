@@ -21,13 +21,17 @@ const fixture=process.argv[2]
 const filename=fixture ? basename(fixture) : 'water.xyz'
 const input=fixture ? await readFile(resolve(fixture),'utf8') : xyz
 const initial=parseDocument(input,filename)
+const lifecycle=!!process.env.CATGO_EDITOR_TEST_LIFECYCLE
+const evidenceDirectory=process.env.CATGO_TEST_EVIDENCE_DIR||resolve(root,'preview')
 const escapeHtml=value=>value.replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))
 const scriptJson=value=>JSON.stringify(value).replace(/</g,'\\u003c')
-const host=`<!doctype html><html><body style="margin:0;font:14px system-ui;background:#eee"><div style="padding:8px">Test host · CatGo file editor · ${escapeHtml(filename)}</div><iframe id="editor" title="CatGo file editor" sandbox="allow-scripts allow-downloads" src="/editor" style="width:100%;height:calc(100vh - 36px);border:0"></iframe><script>
-const record={text:${scriptJson(input)},etag:'v1',writes:[],exports:[],contexts:[],resourceReads:[],events:[],forceConflict:false,programReads:[]};window.testRecord=record;
+const host=`<!doctype html><html><body style="margin:0;font:14px system-ui;background:#eee"><div style="padding:8px">Test host · CatGo file editor · ${escapeHtml(filename)}</div><iframe id="editor" title="CatGo file editor" sandbox="allow-scripts allow-downloads" src="/editor" style="display:${lifecycle ? 'none' : 'block'};width:100%;height:calc(100vh - 36px);border:0"></iframe><script>
+const record={text:${scriptJson(input)},etag:'v1',writes:[],exports:[],contexts:[],resourceReads:[],events:[],subscriptions:[],forceConflict:false,programReads:[]};window.testRecord=record;
 const broken=new URLSearchParams(location.search).has('missing-resource');
 const frame=document.getElementById('editor');
+if(broken)frame.style.display='block';
 const send=message=>frame.contentWindow.postMessage({jsonrpc:'2.0',...message},'*');
+window.notifyResourceUpdate=()=>send({method:'notifications/resources/updated',params:{uri:'host-resource://fixture'}});
 window.addEventListener('message',async event=>{
  if(event.source!==frame.contentWindow)return;
  const message=event.data;record.events.push(message.method);
@@ -43,14 +47,28 @@ window.addEventListener('message',async event=>{
   if(broken){send({id:message.id,error:{code:-32602,message:'Missing program resource'}});return;}
   result={contents:[await (await fetch('/resource?uri='+encodeURIComponent(message.params.uri))).json()]};
  }
- else if(message.method==='resources/read'&&message.params.uri==='host-resource://fixture')result={contents:[{uri:'host-resource://fixture',mimeType:'text/plain',text:record.text,_meta:{'openai/resource':{writable:true,etag:record.etag}}}]};
+ else if(message.method==='resources/read'&&message.params.uri==='host-resource://fixture'){
+  if(record.delayFixtureRead)await new Promise(resolve=>{record.fixtureReadPending=true;record.resolveFixtureRead=resolve});
+  result={contents:[{uri:'host-resource://fixture',mimeType:'text/plain',text:record.text,_meta:{'openai/resource':{writable:true,etag:record.etag}}}]};
+ }
+ else if(message.method==='resources/read'&&message.params.uri==='host-resource://other'){
+  await new Promise(resolve=>{record.otherReadPending=true;record.resolveOtherRead=resolve});
+  result={contents:[{uri:'host-resource://other',mimeType:'text/plain',text:${scriptJson(xyz.replace('O 0 0 0','O 1.25 0 0'))},_meta:{'openai/resource':{writable:true,etag:'other-v1'}}}]};
+ }
  else if(message.method==='ui/update-model-context'){record.contexts.push(message.params);result={};}
- else if(message.method==='resources/subscribe'||message.method==='resources/unsubscribe')result={};
+ else if(message.method==='resources/subscribe'){record.subscriptions.push(message.params.uri);result={};}
+ else if(message.method==='resources/unsubscribe'){
+  if(record.delayUnsubscribe)await new Promise(resolve=>{record.unsubscribePending=true;record.resolveUnsubscribe=resolve});
+  record.subscriptions=record.subscriptions.filter(uri=>uri!==message.params.uri);result={};
+ }
  else if(message.method==='ui/download-file'){record.exports.push(message.params);result={};}
  else if(message.method==='openai/resources/write'){
   if(record.forceConflict||message.params.ifMatch!==record.etag)result={outcome:'conflict',etag:'external-v2'};
   else{record.text=message.params.text;record.etag='v'+(record.writes.length+2);record.writes.push(message.params);result={outcome:'saved',etag:record.etag};}
  }else{send({id:message.id,error:{code:-32601,message:'Unsupported test-host method '+message.method}});return;}
+ if(${lifecycle}&&message.method==='openai/resources/write'&&result.outcome==='saved'){
+  window.notifyResourceUpdate();await new Promise(resolve=>setTimeout(resolve,100));
+ }
  send({id:message.id,result});
 });
 </script></body></html>`
@@ -74,6 +92,13 @@ try {
  page.on('pageerror',error=>errors.push(error.stack ?? error.message))
  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'})
  const editor=page.frameLocator('#editor')
+ if(lifecycle){
+  await editor.locator('header strong').filter({hasText:filename}).waitFor({state:'attached',timeout:30000})
+  // Cross the old deadline while the native-tab equivalent has no layout box.
+  await page.waitForTimeout(3500)
+  assert.deepEqual(await editor.locator('[role="alert"]').allTextContents(),[],'Hidden startup must not report a renderer failure.')
+  await page.evaluate(()=>document.getElementById('editor').style.display='block')
+ }
  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).waitFor({timeout:30000})
  assert.equal(await page.evaluate(()=>window.testRecord.programReads.length),manifest.chunks.length)
  assert.equal(await page.evaluate(()=>window.testRecord.events.filter(method=>method==='ui/initialize').length),1)
@@ -115,6 +140,70 @@ try {
   assert.equal(reopened.sites[0].species[0].element,initial.sites[0].species[0].element)
  }
  assert.equal(await editor.getByRole('button',{name:'Save',exact:true}).isEnabled(),false)
+ if(lifecycle){
+  // Hosts may publish our own file update after acknowledging the write.
+  const reads=await page.evaluate(()=>window.testRecord.resourceReads.length)
+  await page.evaluate(()=>window.notifyResourceUpdate())
+  await page.waitForFunction(count=>window.testRecord.resourceReads.length>count,reads)
+  await page.waitForTimeout(300)
+  assert.equal(await editor.getByRole('button',{name:'Undo',exact:true}).isEnabled(),true,'A delayed own-save update must retain undo history.')
+  assert.equal(await editor.getByRole('spinbutton',{name:'X coordinate'}).isVisible(),true,'An own-save update must retain the coordinates panel.')
+  await editor.getByRole('button',{name:'Undo',exact:true}).click()
+  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).click()
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0)
+  assert.equal(await editor.getByRole('button',{name:'Save',exact:true}).isEnabled(),true)
+  await editor.getByRole('button',{name:'Redo',exact:true}).click()
+  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).click()
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0.25)
+  assert.equal(await editor.getByRole('button',{name:'Save',exact:true}).isEnabled(),false)
+  await page.evaluate(()=>document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'water.xyz',resourceUri:'host-resource://fixture'}}}},'*'))
+  await page.waitForTimeout(300)
+  assert.equal(await editor.getByRole('button',{name:'Undo',exact:true}).isEnabled(),true,'Repeated input for the saved file must not reset history.')
+  assert.equal(await editor.getByRole('spinbutton',{name:'X coordinate'}).isVisible(),true)
+  // Returning to A must cancel the slower B request without reloading A.
+  await page.evaluate(()=>document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'other.xyz',resourceUri:'host-resource://other'}}}},'*'))
+  await page.waitForFunction(()=>window.testRecord.otherReadPending===true)
+  const readsBeforeReturn=await page.evaluate(()=>window.testRecord.resourceReads.length)
+  await page.evaluate(()=>document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'water.xyz',resourceUri:'host-resource://fixture'}}}},'*'))
+  await page.waitForFunction(count=>window.testRecord.resourceReads.length>count,readsBeforeReturn)
+  await page.evaluate(()=>window.testRecord.resolveOtherRead())
+  await page.waitForTimeout(300)
+  assert.equal(await editor.locator('header strong').textContent(),'water.xyz','The latest file request must win over an older pending read.')
+  assert.equal(await editor.getByRole('button',{name:'Undo',exact:true}).isEnabled(),true,'Returning to the active file must retain its history.')
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0.25)
+  await page.evaluate(()=>document.getElementById('editor').style.display='none')
+  await page.waitForTimeout(3500)
+  assert.deepEqual(await editor.locator('[role="alert"]').allTextContents(),[])
+  await page.evaluate(()=>document.getElementById('editor').style.display='block')
+  await editor.getByRole('spinbutton',{name:'X coordinate'}).waitFor({state:'visible'})
+  assert.equal(await editor.getByRole('button',{name:'Undo',exact:true}).isEnabled(),true)
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0.25)
+  assert.equal(await page.evaluate(()=>window.testRecord.events.filter(method=>method==='ui/initialize').length),1,'Hide/show and Save must keep the existing SDK connection.')
+  assert.equal(await page.evaluate(()=>window.testRecord.events.filter(method=>method==='resources/subscribe').length),1,'Unchanged resource updates must not create a reload/subscribe loop.')
+  await page.evaluate(()=>{window.testRecord.text='3\nexternal change\nO 0.75 0 0\nH 0.9572 0 0\nH -0.239 0.927 0\n';window.testRecord.etag='external-v3';window.notifyResourceUpdate()})
+  await editor.getByRole('spinbutton',{name:'X coordinate'}).waitFor({state:'hidden'})
+  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).click()
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0.75)
+  assert.equal(await editor.getByRole('button',{name:'Undo',exact:true}).isEnabled(),false)
+  assert.deepEqual(await editor.getByRole('alert').allTextContents(),[])
+  // A delayed unsubscribe must not strand the retained file without updates.
+  await page.evaluate(()=>{window.testRecord.otherReadPending=false;window.testRecord.delayUnsubscribe=true;document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'other.xyz',resourceUri:'host-resource://other'}}}},'*')})
+  await page.waitForFunction(()=>window.testRecord.otherReadPending===true)
+  await page.evaluate(()=>window.testRecord.resolveOtherRead())
+  await page.waitForFunction(()=>window.testRecord.unsubscribePending===true)
+  await page.evaluate(()=>{window.testRecord.delayFixtureRead=true;document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'water.xyz',resourceUri:'host-resource://fixture'}}}},'*')})
+  await page.waitForFunction(()=>window.testRecord.fixtureReadPending===true)
+  await page.evaluate(()=>{window.testRecord.otherReadPending=false;document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'other.xyz',resourceUri:'host-resource://other'}}}},'*')})
+  await page.waitForFunction(()=>window.testRecord.otherReadPending===true)
+  await page.evaluate(()=>{window.testRecord.delayUnsubscribe=false;window.testRecord.delayFixtureRead=false;window.testRecord.resolveFixtureRead();window.testRecord.resolveOtherRead();window.testRecord.resolveUnsubscribe()})
+  await page.waitForFunction(()=>window.testRecord.subscriptions.includes('host-resource://other'),null,{timeout:5000})
+  assert.equal(await editor.locator('header strong').textContent(),'other.xyz')
+  await page.evaluate(()=>document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'water.xyz',resourceUri:'host-resource://fixture'}}}},'*'))
+  await editor.locator('header strong').filter({hasText:'water.xyz'}).waitFor()
+  await page.waitForFunction(()=>window.testRecord.subscriptions.length===1&&window.testRecord.subscriptions[0]==='host-resource://fixture')
+  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).click()
+  assert.equal(Number(await editor.getByRole('spinbutton',{name:'X coordinate'}).inputValue()),0.75)
+ }
  // A host-side conflict must leave the pending coordinates visible.
  await editor.getByRole('spinbutton',{name:'X coordinate'}).fill('0.5')
  await editor.getByRole('button',{name:'Apply coordinates',exact:true}).click()
@@ -124,6 +213,7 @@ try {
  assert.equal(await editor.getByRole('button',{name:'Save',exact:true}).isEnabled(),false)
  assert.equal(await page.evaluate(()=>window.testRecord.writes.length),1)
  const extraPassed=[]
+ if(lifecycle)extraPassed.push('hidden startup and repeated hide/show without reopening','resource updates before write acknowledgement and after Save preserve the document','undo/redo remains usable after Save','duplicate file input preserves the active document','A to pending B to A keeps the latest file and history','one SDK connection and one resource subscription across Save/hide/show','delayed unsubscribe retains updates for the final active file','external version changes still load')
  let slabChecks
  let previewBondChecks
  let conventionalLayerChecks
@@ -337,7 +427,8 @@ try {
   assert.ok(previewBondChecks.maxBondLength<3.5,JSON.stringify(previewBondChecks))
   assert.ok(previewBondChecks.maxEndpointError<1e-4,JSON.stringify(previewBondChecks))
   assert.deepEqual(await editor.getByRole('alert').allTextContents(),[])
-  await page.screenshot({path:resolve(root,'preview/editor-preview-bonds.png')})
+  await mkdir(evidenceDirectory,{recursive:true})
+  await page.screenshot({path:resolve(evidenceDirectory,'editor-preview-bonds.png')})
   await pane.getByLabel('Show bonds',{exact:true}).uncheck()
   await frame.waitForFunction(()=>!document.querySelector('canvas')?.__scene?.getObjectByName('slab-preview-bonds'))
   await pane.getByLabel('Show bonds',{exact:true}).check()
@@ -453,7 +544,7 @@ try {
   assert.deepEqual(await editor.getByRole('alert').allTextContents(),[])
   extraPassed.push('host-opened crystal slab commits through version-checked Save')
  }
- const directory=resolve(root,'preview');await mkdir(directory,{recursive:true})
+ const directory=evidenceDirectory;await mkdir(directory,{recursive:true})
   const suffix=process.env.CATGO_EDITOR_TEST_BOUNDARY_BONDS ? '-boundary-bonds' : process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? '-periodic-selection' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? '-conventional-layers' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? '-slab-bonds' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? '-import-slab' : fixture ? '-'+filename.replace(/[^A-Za-z0-9_.-]/g,'_') : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? '-hidden-constructor' : process.env.CATGO_EDITOR_TEST_NO_GPU ? '-unavailable-gpu' : process.env.CATGO_EDITOR_TEST_NARROW ? '-narrow' : ''
  await page.screenshot({path:resolve(directory,'editor-acceptance'+suffix+'.png'),fullPage:false})
  // A denied or incomplete program must produce a visible error, not a blank panel.
@@ -464,7 +555,7 @@ try {
  console.log('Browser acceptance passed: read → edit → undo/redo → save; external conflict preserves edits.')
 } catch (error) {
  console.log(JSON.stringify({errors,frames:page ? await Promise.all(page.frames().map(async frame=>({url:frame.url(),text:(await frame.locator('body').innerText()).slice(0,700)}))) : []},null,2))
- if(page){await mkdir(resolve(root,'preview'),{recursive:true});await page.screenshot({path:resolve(root,'preview/editor-failure.png')})}
+ if(page){await mkdir(evidenceDirectory,{recursive:true});await page.screenshot({path:resolve(evidenceDirectory,'editor-failure.png')})}
  throw error
 } finally {
  if(browser)await browser.close()

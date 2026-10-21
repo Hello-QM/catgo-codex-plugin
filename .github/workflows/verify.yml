@@ -73,3 +73,9 @@ jobs:
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:
           CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS: '1'
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_LIFECYCLE: '1'
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
+          CATGO_EDITOR_TEST_NO_GPU: '1'

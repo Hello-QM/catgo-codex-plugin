@@ -14,7 +14,7 @@
   let coordinatesOpen = $state(false)
   let coordinateAtomId = $state<number>()
   let coordinates = $state<(string | number)[]>(['0', '0', '0'])
-  type OpenRequest = {kind:'host';file:FileRef} | {kind:'import';file:FileRef;value:ResourceValue}
+  type OpenRequest = {kind:'host';file:FileRef;value?:ResourceValue} | {kind:'import';file:FileRef;value:ResourceValue}
   let pendingOpen = $state<OpenRequest>()
   let openedKind = $state<'host'|'import'>('host')
   let draggingFile = $state(false)
@@ -23,22 +23,39 @@
   let importTicket = 0
   let importedCount = 0
   let renderError = $state('')
+  let initializationError = $state('')
+  let viewerCheckTimer: ReturnType<typeof setTimeout> | undefined
   let viewerElement: HTMLElement
   let generation = 0
+  let pendingLoad: FileRef | undefined
+  let resourceCheck = 0
+  let deferredResourceUpdate = false
+  let disposed = false
+  let subscribedUri: string | undefined
+  let subscriptionTask = Promise.resolve()
   const state = $derived.by(() => { tick; return {dirty: documentState.dirty, canUndo: documentState.canUndo, canRedo: documentState.canRedo, canSave: documentState.canSave, file: documentState.file, conflict: documentState.conflict, externalChange: documentState.externalChange, writable: documentState.writable} })
   const host = createHost(file => {
     importTicket++; readingFile = false
     requestOpen({kind:'host',file})
   }, uri => {
-    if (openedKind !== 'host' || uri !== state.file?.resourceUri) return
-    // An update emitted by our own save is consumed by its write response.
-    if (documentState.saving) return
-    if (state.dirty) { documentState.externalChange = true; tick++; return }
-    requestOpen({kind:'host',file:state.file})
+    if (openedKind !== 'host' || uri !== documentState.file?.resourceUri) return
+    void reconcileHostResource()
   })
 
   function sync() { structure = structuredClone(documentState.structure); tick++ }
   function requestOpen(request: OpenRequest) {
+    if (request.kind === 'host' && openedKind === 'host' &&
+        request.file.resourceUri === documentState.file?.resourceUri &&
+        request.file.name === documentState.file.name) {
+      pendingOpen = undefined
+      if (pendingLoad && (pendingLoad.resourceUri !== request.file.resourceUri || pendingLoad.name !== request.file.name)) {
+        // A → pending B → A keeps A and invalidates the slower B read.
+        generation++; resourceCheck++; pendingLoad = undefined
+        updateStatus()
+      }
+      void reconcileHostResource()
+      return
+    }
     if (state.dirty) { pendingOpen = request; return }
     pendingOpen = undefined
     void load(request)
@@ -48,25 +65,78 @@
     return documentState.writable && documentState.etag ? 'Saved' : 'Read only · export available'
   }
   function updateStatus() { status = documentState.dirty ? 'Unsaved changes' : cleanStatus() }
+  function syncSubscription() {
+    const task = subscriptionTask.catch(() => {}).then(async () => {
+      // Subscription acknowledgements can outlive a file-open request. Always
+      // converge on the document actually retained, including after disposal.
+      while (true) {
+        const desired = !disposed && openedKind === 'host' ? documentState.file?.resourceUri : undefined
+        if (subscribedUri === desired) return
+        if (subscribedUri) {
+          await host.unsubscribe(subscribedUri)
+          subscribedUri = undefined
+        } else if (desired) {
+          await host.subscribe(desired)
+          subscribedUri = desired
+        }
+      }
+    })
+    subscriptionTask = task
+    return task
+  }
+  async function reconcileHostResource() {
+    const file = documentState.file
+    if (openedKind !== 'host' || !file) return
+    if (documentState.saving) { deferredResourceUpdate = true; return }
+    const request = generation, ticket = ++resourceCheck, version = documentState.etag
+    try {
+      const value = await host.bridge.read(file.resourceUri)
+      if (request !== generation || ticket !== resourceCheck || documentState.file !== file) return
+      if (documentState.saving) { deferredResourceUpdate = true; return }
+      // A write that completed during this read makes its result stale.
+      if (version !== documentState.etag) { void reconcileHostResource(); return }
+      const sameVersion = value.etag !== undefined
+        ? value.etag === documentState.etag
+        : documentState.etag === undefined && value.text === documentState.originalText
+      if (sameVersion) {
+        documentState.writable = value.writable
+        tick++; updateStatus()
+        return
+      }
+      if (documentState.dirty) {
+        documentState.externalChange = true
+        documentState.writable = value.writable
+        tick++
+        return
+      }
+      // Only a different disk version replaces the clean document. Own-save
+      // notifications and duplicate file input preserve history and selection.
+      await load({kind:'host',file,value})
+    } catch (cause) {
+      if (request === generation && ticket === resourceCheck) error = String((cause as Error).message ?? cause)
+    }
+  }
   async function load(open: OpenRequest) {
     const {file} = open
     const request = ++generation
-    const previous = documentState.file
-    const previousKind = openedKind
+    pendingLoad = file
+    resourceCheck++; deferredResourceUpdate = false
     status = `Opening ${file.name}…`; error = ''
     try {
-      const value = open.kind === 'import' ? open.value : await host.bridge.read(file.resourceUri)
+      const value = open.kind === 'import' ? open.value : open.value ?? await host.bridge.read(file.resourceUri)
       if (request !== generation) return
       documentState.load(file, value)
       openedKind = open.kind
       selected = []; coordinatesOpen = false; coordinateAtomId = undefined; sync()
       renderError = ''
+      initializationError = ''
       await flush()
-      setTimeout(() => checkViewer(request), 3000)
+      if (documentState.file !== file || openedKind !== open.kind) return
+      scheduleViewerCheck()
       updateStatus()
-      if (previousKind === 'host' && previous && previous.resourceUri !== file.resourceUri) await host.unsubscribe(previous.resourceUri)
-      if (open.kind === 'host') await host.subscribe(file.resourceUri)
+      await syncSubscription()
     } catch (cause) { if (request === generation) error = String((cause as Error).message ?? cause) }
+    finally { if (request === generation) pendingLoad = undefined }
   }
 
   async function importFiles(files: File[]) {
@@ -98,15 +168,29 @@
     void importFiles(files)
   }
 
+  function viewerVisible() {
+    const box = viewerElement?.getBoundingClientRect()
+    return !document.hidden && !!box?.width && !!box?.height
+  }
+  function scheduleViewerCheck() {
+    clearTimeout(viewerCheckTimer)
+    if (!structure || !viewerVisible()) { initializationError = ''; return }
+    const request = generation
+    viewerCheckTimer = setTimeout(() => checkViewer(request), 3000)
+  }
   function checkViewer(request: number) {
     if (request !== generation || !structure || renderError) return
+    if (!viewerVisible()) { initializationError = ''; return }
     const canvas = viewerElement?.querySelector('canvas') as HTMLCanvasElement & {__renderer?: any; __scene?: any; __camera?: any} | null
     const renderer = canvas?.__renderer
     const dimensions = canvas?.getBoundingClientRect()
     const calls = renderer?.info?.render?.calls
     if (!canvas || !renderer || !dimensions?.width || !dimensions?.height || calls === 0) {
-      renderError = `3D view did not initialize. WebGL: ${typeof WebGLRenderingContext}; canvas: ${!!canvas}; renderer: ${!!renderer}; size: ${Math.round(dimensions?.width ?? 0)} × ${Math.round(dimensions?.height ?? 0)}; draw calls: ${calls ?? 'none'}.`
-    }
+      initializationError = `3D view did not initialize. WebGL: ${typeof WebGLRenderingContext}; canvas: ${!!canvas}; renderer: ${!!renderer}; size: ${Math.round(dimensions?.width ?? 0)} × ${Math.round(dimensions?.height ?? 0)}; draw calls: ${calls ?? 'none'}.`
+      // A late renderer can recover in this tab; genuine renderer exceptions
+      // remain separate and are never cleared by this readiness probe.
+      viewerCheckTimer = setTimeout(() => checkViewer(request), 500)
+    } else initializationError = ''
   }
 
   function edit(edited: AnyStructure) {
@@ -130,6 +214,9 @@
       if (result.outcome === 'too-large') error = `The host could not save this file: maximum ${result.maxBytes} bytes.`
       status = documentState.dirty ? 'Unsaved changes' : 'Saved'
     } catch (cause) { error = (cause as Error).message; tick++ }
+    finally {
+      if (deferredResourceUpdate) { deferredResourceUpdate = false; void reconcileHostResource() }
+    }
   }
   function openCoordinates() {
     if (!structure?.sites.length) return
@@ -160,6 +247,9 @@
     } catch (cause) { error = (cause as Error).message }
   }
   onMount(() => {
+    const resize = new ResizeObserver(scheduleViewerCheck)
+    resize.observe(viewerElement)
+    document.addEventListener('visibilitychange', scheduleViewerCheck)
     void host.connect().then(() => { if (!state.file) status = 'Open a CIF, XYZ or POSCAR file in Codex.' }).catch(cause => { error = cause.message })
     const key = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); if (state.canSave) void save() }
@@ -183,7 +273,7 @@
     const rejection = (event: PromiseRejectionEvent) => { renderError = `3D view error: ${event.reason?.message ?? String(event.reason)}` }
     window.addEventListener('error', failure)
     window.addEventListener('unhandledrejection', rejection)
-    return () => { generation++; importTicket++; window.removeEventListener('keydown', key, true); window.removeEventListener('dragenter',dragOver,true); window.removeEventListener('dragover',dragOver,true); window.removeEventListener('dragleave',leave,true); window.removeEventListener('drop',dropFile,true); window.removeEventListener('error',failure); window.removeEventListener('unhandledrejection',rejection); if (openedKind === 'host' && state.file) void host.unsubscribe(state.file.resourceUri) }
+    return () => { disposed = true; generation++; importTicket++; clearTimeout(viewerCheckTimer); resize.disconnect(); document.removeEventListener('visibilitychange',scheduleViewerCheck); window.removeEventListener('keydown', key, true); window.removeEventListener('dragenter',dragOver,true); window.removeEventListener('dragover',dragOver,true); window.removeEventListener('dragleave',leave,true); window.removeEventListener('drop',dropFile,true); window.removeEventListener('error',failure); window.removeEventListener('unhandledrejection',rejection); void syncSubscription().catch(() => {}) }
   })
 </script>
 
@@ -203,6 +293,7 @@
   </header>
   {#if error}<div class="error" role="alert">{error}</div>{/if}
   {#if renderError}<div class="error" role="alert">{renderError}</div>{/if}
+  {#if initializationError && !renderError}<div class="error" role="alert">{initializationError}</div>{/if}
   {#if state.externalChange}
     <div class="notice">The file changed outside this editor.
       <button onclick={() => { if (state.file) pendingOpen = {kind:'host',file:state.file} }}>Reload…</button>

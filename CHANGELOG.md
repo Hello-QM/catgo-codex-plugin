@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.12 — 2026-10-21
+
+- Wait for a visible viewer layout before checking initialization. Recheck after
+  size/visibility changes and clear a recovered readiness warning in the same
+  tab; retain genuine WebGL/render exceptions.
+- Reconcile host resource updates by version. Notifications from the editor's
+  own Save and repeated input for the same file retain coordinates, selection
+  and Undo/Redo history instead of reloading the document. Defer updates during
+  Save and reject stale reads across file changes or completed writes.
+- Keep actual external changes and save conflicts protected. Avoid repeating
+  the same resource subscription when reloading an already subscribed file.
+- Keep the latest file request when returning to the active file during a slow
+  read; serialize subscription changes so late acknowledgements cannot strand
+  the retained file without updates.
+- Add a browser regression covering hidden startup, repeated hide/show,
+  notifications before the write acknowledgement and after Save, continued
+  Undo/Redo, duplicate file input, delayed file/subscription changes and real
+  external changes. Run it and the
+  unavailable-GPU case in CI. Read the App SDK version from the package manifest.
+
 ## 0.2.11 — 2026-10-20
 
 - Restore CatGo's ordinary periodic-bond settings so the Cell-edge stub bonds

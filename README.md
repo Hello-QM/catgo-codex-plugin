@@ -34,6 +34,9 @@ launches Codex before installing. The shipped launcher uses that command;
 
 ## Use
 
+Version 0.2.12 fixes hidden-tab initialization warnings and own-save resource
+updates that reset the active editor. See the [lifecycle fix and verification](docs/lifecycle-fix-0.2.12.md).
+
 - Rotate and inspect atoms, bonds and the unit cell; select atoms and edit coordinates.
 - In **Controls → Bonds**, use **Cell-edge stub bonds** and **Stub Length** for
   periodic boundary bonds. Native Codex Linux checks of 0.2.11 confirmed visible

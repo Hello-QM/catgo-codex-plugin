@@ -1,5 +1,6 @@
 import { App, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps'
 import { OpenAIExtensions } from '@openai/mcp-extensions/app'
+import { version } from '../plugin.json'
 import type { FileBridge, FileRef, ResourceValue, WriteResult } from './document'
 
 type Connection = {
@@ -18,7 +19,7 @@ const connectionKey = Symbol.for('catgo.codex.file-editor.connection')
 export function getHostConnection(): Connection {
   const shared = globalThis as typeof globalThis & {[connectionKey]?: Connection}
   if (shared[connectionKey]) return shared[connectionKey]
-  const app = new App({ name: 'CatGo Structure Editor', version: '0.2.10' }, { availableDisplayModes: ['fullscreen'] }, { autoResize: false })
+  const app = new App({ name: 'CatGo Structure Editor', version }, { availableDisplayModes: ['fullscreen'] }, { autoResize: false })
   const extensions = new OpenAIExtensions(app)
   const connection: Connection = {app, extensions, style: () => {}}
   shared[connectionKey] = connection
