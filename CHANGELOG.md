@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.11 — 2026-10-20
+
+- Restore CatGo's ordinary periodic-bond settings so the Cell-edge stub bonds
+  checkbox and Stub Length inputs affect the rendered cross-cell bonds. The
+  plugin previously forced incomplete bonds hidden across the whole viewer.
+- Keep incomplete bonds hidden specifically in the Miller cut preview, retaining
+  the earlier slab-preview fix without overriding the ordinary viewer controls.
+- Add a browser regression that measures the actual boundary-bond transforms
+  while using the checkbox, number input and slider.
+
 ## 0.2.10 — 2026-10-15
 
 - Apply catgo-dev `00d4575` and `a42235c`: periodic-image click/box selection,

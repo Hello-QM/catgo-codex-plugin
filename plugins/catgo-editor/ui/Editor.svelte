@@ -235,7 +235,7 @@
         allow_file_drop={false} enable_info_pane={true} enable_measure_mode={true}
         persist_settings={false} register_as_viewer={false} viewer_id="catgo-codex-file"
         align_on_load="none" fullscreen_toggle={false} show_controls={true}
-        scene_props={{bonding_strategy: 'atom_radii', bonding_options: {}, bond_scale: 1.15, hide_incomplete_bonds: true}}
+        scene_props={{bonding_strategy: 'atom_radii', bonding_options: {}, bond_scale: 1.15}}
         hidden_toolbar_items={['fullscreen', 'gesture', 'touch', 'workflow', 'server', 'upload_hpc', 'terminal', 'remote_save', 'chat', 'plugin_hub', 'optimization']}
         on_structure_change={edit}
         style="height:100%;width:100%;min-width:0;max-width:none;border-radius:0" />

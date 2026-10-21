@@ -49,6 +49,15 @@ const editorBoundary = {
       if (!source.includes(action)) throw new Error('Review the upstream Build toolbar action before building the editor.')
       return compileEditorComponent(source.replace(action,action+"\n          aria-label={t('structure.build_tools')}"),args.path)
     })
+    builder.onLoad({filter:/[\\/]structure[\\/]StructureScene\.svelte$/},async args => {
+      catgoSourceFiles.add(args.path)
+      const source = await readFile(args.path,'utf8')
+      const preview = '          {cutting_show_bonds}\n          {hide_incomplete_bonds}'
+      if (source.split(preview).length !== 2) throw new Error('Review the upstream slab-preview bond policy before building the editor.')
+      // Keep the cut preview's complete-bond policy local to that preview.
+      // Forcing it on the whole viewer disables the ordinary stub controls.
+      return compileEditorComponent(source.replace(preview,'          {cutting_show_bonds}\n          hide_incomplete_bonds={true}'),args.path)
+    })
     builder.onLoad({filter:/[\\/]structure[\\/]BuildPane\.svelte$/},async args => {
       catgoSourceFiles.add(args.path)
       const source = await readFile(args.path,'utf8')

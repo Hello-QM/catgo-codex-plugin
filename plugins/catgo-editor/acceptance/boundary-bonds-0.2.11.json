@@ -1,0 +1,62 @@
+{
+  "version": "0.2.11",
+  "checkedAt": "2026-10-20T17:01:28.740968-07:00",
+  "nativeCodexHostVerified": false,
+  "cause": "The plugin forced hide_incomplete_bonds=true for the entire viewer, overriding the upstream stub controls.",
+  "fix": "Use ordinary upstream defaults; apply the incomplete-bond hiding policy only to Miller cut previews in the build adapter.",
+  "before": {
+    "version": "0.2.10",
+    "fixture": "Si pair across x in a 10 Angstrom cell",
+    "checkbox": true,
+    "lengthScale": 1,
+    "visibleInstanceLengths": [],
+    "outcome": "failed",
+    "reason": "Viewer-wide hide_incomplete_bonds=true suppressed cross-cell stubs"
+  },
+  "boundaryBonds": {
+    "long": [
+      1,
+      1
+    ],
+    "short": [
+      0.5,
+      0.5
+    ],
+    "off": [
+      1,
+      1
+    ],
+    "geometryUnchanged": true
+  },
+  "slabPreview": {
+    "miller": [
+      0,
+      0,
+      1
+    ],
+    "supercell": [
+      2,
+      2
+    ],
+    "thickness": 9.01062774,
+    "offset": 1,
+    "vacuum": 15,
+    "atoms": 48,
+    "renderedBonds": 69,
+    "maxBondLength": 3.176706075668335,
+    "maxEndpointError": 2.6883099816814507e-07
+  },
+  "checks": {
+    "pythonRuntime": 7,
+    "document": 9,
+    "retainedUpstream": 23,
+    "officialMcpClient": true,
+    "packageIntegrity": true,
+    "pageErrors": []
+  },
+  "runtimeZip": {
+    "file": "catgo-editor-0.2.11.zip",
+    "sha256": "e7cb3fc999f786f7c8888780ca55b5758f5981956b8bfaba3b13f32a71424366"
+  },
+  "programSha256": "871de4d4b989f9926ebc2943e7a1777a479a8c9ab1223f2d79cc8818a3990bbd"
+}

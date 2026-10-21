@@ -47,6 +47,17 @@ A chat may retain a server from a removed plugin cache version. Refresh its
 plugin connections before opening a new editor. The current server snapshots
 assets at initialization to protect already-open editors.
 
+## Cell-edge stub bonds or Stub Length has no effect
+
+Update to 0.2.11 or later and reopen the editor. Earlier plugin versions forced
+incomplete bonds hidden in the ordinary viewer, overriding these controls.
+The cut preview still hides incomplete bonds to avoid misleading preview sticks.
+
+Stub Length affects cross-cell bonds only. It is a fraction of the half-bond
+length; very short stubs (such as 0.15) can be entirely inside an atom sphere.
+Try 0.5–1.0 when checking the setting. Bonds with both endpoints drawn remain
+complete, and molecular bonds do not change.
+
 ## Save is unavailable or reports a conflict
 
 Save requires a host-opened writable resource and version token. Imported copies

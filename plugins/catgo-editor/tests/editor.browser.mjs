@@ -128,6 +128,63 @@ try {
  let previewBondChecks
  let conventionalLayerChecks
  let selectionChecks
+  let boundaryBondChecks
+  if(process.env.CATGO_EDITOR_TEST_BOUNDARY_BONDS){
+   // The only Si-Si neighbor is across x; neither atom is close enough to a
+   // face to generate a boundary-image sphere. This exercises actual stubs.
+   const text='Si periodic boundary\n1\n10 0 0\n0 10 0\n0 0 10\nSi\n2\nDirect\n0.1 0.5 0.5\n0.9 0.5 0.5\n'
+   await page.evaluate(text=>{
+    const record=window.testRecord;record.text=text;record.etag='boundary-v1';record.forceConflict=false
+    document.getElementById('editor').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-input',params:{arguments:{file:{name:'boundary.poscar',resourceUri:'host-resource://fixture'}}}},'*')
+   },text)
+   await editor.getByRole('button',{name:'Discard and open',exact:true}).click()
+   await editor.locator('header strong').filter({hasText:'boundary.poscar'}).waitFor()
+   await editor.locator('.structure-controls-toggle').click()
+   const pane=editor.locator('.controls-pane')
+   const checkbox=pane.getByRole('checkbox',{name:'Cell-edge stub bonds',exact:true})
+   await checkbox.check()
+   const length=pane.locator('label').filter({hasText:'Stub Length'}).getByRole('spinbutton')
+   const geometry=()=>editor.locator('canvas[data-render-active="true"]').evaluate(canvas=>{
+    const result=[]
+    canvas.__scene.traverse(mesh=>{
+     if(!mesh.isInstancedMesh||!mesh.material?.uniforms?.uStubScale)return
+     const data=mesh.instanceMatrix.array
+     for(let i=0;i<mesh.count;i++){
+      const n=i*16
+      const yLength=Math.hypot(data[n+4],data[n+5],data[n+6])
+      if(yLength>1e-6)result.push(yLength)
+     }
+    })
+    return result.sort((a,b)=>a-b)
+   })
+   await length.fill('1')
+   await length.press('Tab')
+   await page.waitForTimeout(300)
+   const long=await geometry()
+   assert.ok(long.length>=2,'Cross-cell stubs must be visible when the checkbox is enabled: '+JSON.stringify(long))
+   assert.ok(long.every(n=>Math.abs(n-1)<1e-4),JSON.stringify(long))
+   const slider=pane.locator('label').filter({hasText:'Stub Length'}).getByRole('slider')
+   await slider.press('Home')
+   for(let step=0;step<9;step++)await slider.press('ArrowRight')
+   assert.equal(Number(await length.inputValue()),0.5)
+   await page.waitForTimeout(300)
+   const short=await geometry()
+   assert.equal(short.length,long.length)
+   assert.ok(short.every(n=>Math.abs(n-0.5)<1e-4),JSON.stringify(short))
+   await checkbox.uncheck()
+   await page.waitForTimeout(300)
+   const off=await geometry()
+   assert.ok(off.length>=2&&off.every(n=>Math.abs(n-1)<1e-4),JSON.stringify(off))
+   await checkbox.check()
+   await page.waitForTimeout(300)
+   const restored=await geometry()
+   assert.equal(restored.length,short.length)
+   assert.ok(restored.every(n=>Math.abs(n-0.5)<1e-4))
+   assert.equal(await editor.getByRole('button',{name:'Save',exact:true}).isEnabled(),false)
+   boundaryBondChecks={long,short,off,geometryUnchanged:true}
+   extraPassed.push('periodic boundary checkbox controls real bond meshes','stub length changes real instance transforms','display settings do not dirty the structure')
+   await editor.locator('.structure-controls-toggle').click()
+  }
  if(process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION){
   const text=await readFile(resolve(root,'tests/fixtures/Si_periodic_constraints.poscar'),'utf8')
   await page.evaluate(text=>{
@@ -397,12 +454,12 @@ try {
   extraPassed.push('host-opened crystal slab commits through version-checked Save')
  }
  const directory=resolve(root,'preview');await mkdir(directory,{recursive:true})
- const suffix=process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? '-periodic-selection' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? '-conventional-layers' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? '-slab-bonds' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? '-import-slab' : fixture ? '-'+filename.replace(/[^A-Za-z0-9_.-]/g,'_') : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? '-hidden-constructor' : process.env.CATGO_EDITOR_TEST_NO_GPU ? '-unavailable-gpu' : process.env.CATGO_EDITOR_TEST_NARROW ? '-narrow' : ''
+  const suffix=process.env.CATGO_EDITOR_TEST_BOUNDARY_BONDS ? '-boundary-bonds' : process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? '-periodic-selection' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? '-conventional-layers' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? '-slab-bonds' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? '-import-slab' : fixture ? '-'+filename.replace(/[^A-Za-z0-9_.-]/g,'_') : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? '-hidden-constructor' : process.env.CATGO_EDITOR_TEST_NO_GPU ? '-unavailable-gpu' : process.env.CATGO_EDITOR_TEST_NARROW ? '-narrow' : ''
  await page.screenshot({path:resolve(directory,'editor-acceptance'+suffix+'.png'),fullPage:false})
  // A denied or incomplete program must produce a visible error, not a blank panel.
  await page.goto(`http://127.0.0.1:${server.address().port}/?missing-resource`,{waitUntil:'domcontentloaded'})
  await page.frameLocator('#editor').getByRole('alert').filter({hasText:'Missing program resource'}).waitFor()
- await writeFile(resolve(directory,process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? 'browser-periodic-selection.json' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? 'browser-conventional-layers.json' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? 'browser-slab-bonds.json' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? 'browser-import-slab.json' : fixture ? 'browser-'+filename+'.json' : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? 'browser-hidden-constructor.json' : process.env.CATGO_EDITOR_TEST_NO_GPU ? 'browser-unavailable-gpu.json' : process.env.CATGO_EDITOR_TEST_NARROW ? 'browser-narrow-acceptance.json' : 'browser-acceptance.json'),JSON.stringify({host:'protocol test harness',nativeCodexHostVerified:false,fixture:filename,atoms:initial.sites.length,cellVolume:initial.lattice?.volume,entryBytes:Buffer.byteLength(html),programResources:manifest.chunks.length,renderedPixels:pixels,slabChecks,previewBondChecks,conventionalLayerChecks,selectionChecks,passed:['small UI entry','program loading through MCP resources','single SDK initialization','buffered file-open input','opaque-origin sandbox and CSP','host file read',process.env.CATGO_EDITOR_TEST_NO_GPU ? 'unavailable graphics API is reported; editing remains usable' : 'real CatGo 3D pixels rendered','coordinate edit','undo/redo','version-checked write','saved geometry reparses; atom count and cell preserved','conflict preserves edits',...extraPassed,'visible resource-loading failure'],pageErrors:errors},null,2))
+ await writeFile(resolve(directory,process.env.CATGO_EDITOR_TEST_BOUNDARY_BONDS ? 'browser-boundary-bonds.json' : process.env.CATGO_EDITOR_TEST_PERIODIC_SELECTION ? 'browser-periodic-selection.json' : process.env.CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS ? 'browser-conventional-layers.json' : process.env.CATGO_EDITOR_TEST_SLAB_BONDS ? 'browser-slab-bonds.json' : process.env.CATGO_EDITOR_TEST_IMPORT_AND_SLAB ? 'browser-import-slab.json' : fixture ? 'browser-'+filename+'.json' : process.env.CATGO_EDITOR_TEST_HIDDEN_CONSTRUCTOR ? 'browser-hidden-constructor.json' : process.env.CATGO_EDITOR_TEST_NO_GPU ? 'browser-unavailable-gpu.json' : process.env.CATGO_EDITOR_TEST_NARROW ? 'browser-narrow-acceptance.json' : 'browser-acceptance.json'),JSON.stringify({host:'protocol test harness',nativeCodexHostVerified:false,fixture:filename,atoms:initial.sites.length,cellVolume:initial.lattice?.volume,entryBytes:Buffer.byteLength(html),programResources:manifest.chunks.length,renderedPixels:pixels,slabChecks,previewBondChecks,conventionalLayerChecks,selectionChecks,boundaryBondChecks,passed:['small UI entry','program loading through MCP resources','single SDK initialization','buffered file-open input','opaque-origin sandbox and CSP','host file read',process.env.CATGO_EDITOR_TEST_NO_GPU ? 'unavailable graphics API is reported; editing remains usable' : 'real CatGo 3D pixels rendered','coordinate edit','undo/redo','version-checked write','saved geometry reparses; atom count and cell preserved','conflict preserves edits',...extraPassed,'visible resource-loading failure'],pageErrors:errors},null,2))
  if(errors.length)throw Error(errors.join('; '))
  console.log('Browser acceptance passed: read → edit → undo/redo → save; external conflict preserves edits.')
 } catch (error) {

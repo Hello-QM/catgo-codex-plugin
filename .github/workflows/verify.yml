@@ -60,6 +60,9 @@ jobs:
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:
+          CATGO_EDITOR_TEST_BOUNDARY_BONDS: '1'
+      - run: node plugins/catgo-editor/tests/editor.browser.mjs
+        env:
           CATGO_EDITOR_TEST_PERIODIC_SELECTION: '1'
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:

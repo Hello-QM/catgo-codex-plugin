@@ -1,5 +1,11 @@
 # Verification scope
 
+Version 0.2.11 adds a real-browser boundary-bond regression. A periodic Si pair
+with no drawn image atoms produces two 1 Å stubs at scale 1, two 0.5 Å stubs
+after moving the slider to 0.5, and two 1 Å half-bonds with stub mode off. The
+test also checks that view controls do not dirty the structure. The existing
+48-atom Miller cut-preview bond case remains a separate regression.
+
 The release contains two kinds of evidence:
 
 - Historical native Codex user checks: water rendered in 3D; IrO2 CIF displayed

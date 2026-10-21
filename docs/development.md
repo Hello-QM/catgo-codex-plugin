@@ -27,6 +27,7 @@ npx playwright install chromium
 cd ../../..
 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_PERIODIC_SELECTION=1 node plugins/catgo-editor/tests/editor.browser.mjs
+CATGO_EDITOR_TEST_BOUNDARY_BONDS=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_SLAB_BONDS=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_IMPORT_AND_SLAB=1 node plugins/catgo-editor/tests/editor.browser.mjs
 CATGO_EDITOR_TEST_CONVENTIONAL_LAYERS=1 node plugins/catgo-editor/tests/editor.browser.mjs
