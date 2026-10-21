@@ -9,6 +9,12 @@
   the earlier slab-preview fix without overriding the ordinary viewer controls.
 - Add a browser regression that measures the actual boundary-bond transforms
   while using the checkbox, number input and slider.
+- Record native Codex Linux acceptance on 2026-10-21: the right-panel file
+  editor visibly changes the boundary bonds at Stub Length 1.0/0.5 and when
+  toggling stub mode. Include a synthetic Si fixture, four screenshots and a
+  separate native receipt. A private 157-atom structure also rendered; its
+  coordinates and screenshot remain local. This acceptance update does not
+  change the runtime or release version.
 
 ## 0.2.10 — 2026-10-15
 

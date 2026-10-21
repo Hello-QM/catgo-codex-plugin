@@ -1,5 +1,15 @@
 # Verification scope
 
+Native Codex Linux acceptance of **0.2.11** was completed on 2026-10-21 in the
+actual right-panel file editor. A synthetic two-Si structure visibly changed
+its boundary bonds at Stub Length 1.0/0.5 and when stub mode was disabled and
+re-enabled. All four comparison captures used the same camera. A private
+157-atom structure also rendered, and its original/copy SHA256 checks matched.
+See the [native screenshots and reproduction steps](native-host-0.2.11.md)
+and [versioned native receipt](../plugins/catgo-editor/acceptance/native-host-0.2.11.json).
+This check did not edit coordinates or exercise native Save, undo/redo or
+non-Linux host rendering.
+
 Version 0.2.11 adds a real-browser boundary-bond regression. A periodic Si pair
 with no drawn image atoms produces two 1 Å stubs at scale 1, two 0.5 Å stubs
 after moving the slider to 0.5, and two 1 Å half-bonds with stub mode off. The
@@ -15,11 +25,12 @@ The release contains two kinds of evidence:
   real WebGL pixels in an opaque-origin protocol harness, import protection,
   Miller-index slab generation, and periodic preview bond endpoints/lengths.
 
-The native confirmations apply to earlier development versions. They do not
-establish that all later releases, other operating systems, or native saves
-have been tested. The browser harness identifies itself as a protocol test host;
-it is not the Codex desktop app. Receipts are retained under the plugin's
-`acceptance/` directory, with new release results separately recorded.
+The historical native confirmations listed above apply to earlier development
+versions; the separate 0.2.11 native receipt covers only the checks described
+at the top of this page. Neither establishes coverage of later releases,
+other operating systems or native saves. The browser harness identifies itself
+as a protocol test host; it is not the Codex desktop app. Receipts are retained
+under the plugin's `acceptance/` directory, with new results separately recorded.
 
 `vendor/catgo/SOURCE.json` identifies the extracted sources.
 `plugins/catgo-editor/references/catgo-dev-slab.json` pins the cutting path;

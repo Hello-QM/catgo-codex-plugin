@@ -29,6 +29,9 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
 ## 功能
 
 - 原子、化学键、晶胞的 3D 显示、选择与坐标编辑，支持撤销和重做。
+- 在 **Controls → Bonds** 中调整 **Cell-edge stub bonds** 和 **Stub Length**。
+  0.2.11 已在 Linux 的 Codex 右侧原生编辑器中验证 1.0/0.5 及开关的画布变化，
+  见[现场截图与复现步骤](docs/native-host-0.2.11.md)。
 - 从 Codex 打开的可写文件可用 **Save** 保存；保存检查文件版本，冲突时保留编辑。
 - **Open** 和拖入的结构作为副本编辑，通过 **Export** 导出。
 - **Build Tools → Slab** 支持 Miller 指数、厚度/层数、终止面、面内超胞、

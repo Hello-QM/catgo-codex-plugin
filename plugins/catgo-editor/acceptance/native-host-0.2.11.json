@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.11",
+  "checkedAt": "2026-10-21T22:09:04.059455+00:00",
+  "nativeCodexHostVerified": true,
+  "host": {
+    "application": "Codex desktop",
+    "version": "26.1016.51333",
+    "platform": "Linux",
+    "surface": "native right-panel file editor"
+  },
+  "programSha256": "871de4d4b989f9926ebc2943e7a1777a479a8c9ab1223f2d79cc8818a3990bbd",
+  "nativeFileReadVerified": true,
+  "nativeStructureDisplayVerified": true,
+  "fixture": {
+    "path": "examples/Si-boundary-stubs-0.2.11.poscar",
+    "sha256": "1ab54c20aa03de4ca12dc2e8cc420bc6ff5daef7614112757b2e32e8ebb1ba92",
+    "atoms": 2,
+    "cellAngstrom": [
+      10,
+      10,
+      10
+    ],
+    "fractionalSites": [
+      [
+        0.1,
+        0.5,
+        0.5
+      ],
+      [
+        0.9,
+        0.5,
+        0.5
+      ]
+    ]
+  },
+  "boundaryBondControls": {
+    "strategy": "Atom Radii",
+    "bonds": "Always",
+    "bondScale": 1.15,
+    "stubLength1ToHalf": "pass: visible blue boundary bond segments shorten",
+    "stubModeUnchecked": "pass: complete half-bonds appear; canvas matches checked 1.0 for this fixture",
+    "stubModeRechecked": "pass: checked 0.5 canvas is restored exactly",
+    "sameCameraAnglesDegrees": [
+      -91.1,
+      1,
+      -0.5
+    ],
+    "viewportPixels": [
+      880,
+      932
+    ],
+    "pixelComparisonRegion": {
+      "x": 0,
+      "y": 230,
+      "width": 880,
+      "height": 670
+    },
+    "changedPixels1VersusHalf": 2547,
+    "changedPixelsHalfVersusRechecked": 0,
+    "changedPixels1VersusUnchecked": 0,
+    "documentRemainedClean": true
+  },
+  "otherNativeStructure": {
+    "atoms": 157,
+    "renderingVerified": true,
+    "footer": "Saved · 157 atoms",
+    "errorAlerts": [],
+    "originalAndCopiesUnchanged": true,
+    "integrityMethod": "Compared final original/copy SHA256 values with the hash recorded before the check.",
+    "evidenceAvailability": "Maintainer-reported result; raw structure, screenshot and hashes retained locally."
+  },
+  "nativeCoordinateEditVerified": false,
+  "nativeSaveVerified": false,
+  "nativeUndoRedoVerified": false,
+  "otherOperatingSystemsVerified": false,
+  "connectionNotes": {
+    "nativeFileEntrypointProvidedHostResourceBridge": true,
+    "directToolAppReportedMissingHostFileInterface": true,
+    "toolResponseAloneCountedAsPass": false,
+    "finalPrivateFileTabSelectedByUser": true
+  },
+  "screenshots": {
+    "stubs-1.0.png": {
+      "path": "docs/evidence/native-host-0.2.11/stubs-1.0.png",
+      "sha256": "84c8c8f96803b1620a3187cf6d50c92948e719be1f2773976f5a510afd9ccbed",
+      "bytes": 31378
+    },
+    "stubs-0.5.png": {
+      "path": "docs/evidence/native-host-0.2.11/stubs-0.5.png",
+      "sha256": "129861fa6fb76731c046a3f5281b1f762a5fe2d20f5c6acd5fcc68918c827a92",
+      "bytes": 31223
+    },
+    "stubs-off.png": {
+      "path": "docs/evidence/native-host-0.2.11/stubs-off.png",
+      "sha256": "19233fe02028881315e866903ac5d6eaaf5de48d176cb9291cf69c4145008132",
+      "bytes": 31381
+    },
+    "stubs-rechecked.png": {
+      "path": "docs/evidence/native-host-0.2.11/stubs-rechecked.png",
+      "sha256": "a935aa74c524b759ba3dc3b724f307c85b55d6c6c58a2fe6e97e232627d8ac1f",
+      "bytes": 31214
+    }
+  },
+  "publicEvidenceScope": "Only the synthetic Si fixture and its four native screenshots. No private structure, private screenshot, local paths or session identifiers are distributed.",
+  "runtimeChanged": false,
+  "releaseVersionChanged": false,
+  "reinstalledDuringSuccessfulAcceptance": false,
+  "documentation": "docs/native-host-0.2.11.md"
+}

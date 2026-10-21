@@ -35,6 +35,9 @@ launches Codex before installing. The shipped launcher uses that command;
 ## Use
 
 - Rotate and inspect atoms, bonds and the unit cell; select atoms and edit coordinates.
+- In **Controls → Bonds**, use **Cell-edge stub bonds** and **Stub Length** for
+  periodic boundary bonds. Native Codex Linux checks of 0.2.11 confirmed visible
+  changes at 1.0 and 0.5; see the [screenshots and reproduction steps](docs/native-host-0.2.11.md).
 - Use undo/redo. **Save** writes a host-opened writable file with a version check;
   conflicts keep pending edits. **Export** saves an edited copy.
 - Import through **Open** or drag/drop, when allowed by the host. Imported copies

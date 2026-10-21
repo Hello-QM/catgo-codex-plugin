@@ -41,6 +41,22 @@ or “CatGo could not open” error and include the plugin/host versions in an i
 WebGL must be available in the host sandbox. Coordinate edits can remain usable
 when the host's graphics initialization fails.
 
+## The editor reports a missing file-resource interface
+
+The message `This host does not provide the file-resource interface required by the editor.`
+can appear in an app opened directly from a chat tool call. The tool result's
+"Opened" message does not establish that the native file viewer has read the
+file. Open the workspace structure through Codex's file entrypoint and select
+its right-panel file tab. Confirm the filename, visible atoms and atom count
+in the footer. If an agent's open request is queued or creates an inactive tab,
+select the intended file tab before checking the canvas.
+
+In the 0.2.11 native check, the actual file viewer provided the host resource
+bridge while the directly invoked tool app did not. No plugin reinstall or
+host-code patch was needed to complete that native check. A host without the
+file-entrypoint capability still cannot provide that bridge; imported copies
+through **Open** use **Export**, not host-file Save.
+
 ## Missing program-manifest.json after updating
 
 A chat may retain a server from a removed plugin cache version. Refresh its
@@ -57,6 +73,10 @@ Stub Length affects cross-cell bonds only. It is a fraction of the half-bond
 length; very short stubs (such as 0.15) can be entirely inside an atom sphere.
 Try 0.5–1.0 when checking the setting. Bonds with both endpoints drawn remain
 complete, and molecular bonds do not change.
+
+Disabling **Cell-edge stub bonds** restores complete half-bonds in the tested
+two-Si boundary case; it does not hide every bond. See the
+[native comparison](native-host-0.2.11.md) and its public synthetic fixture.
 
 ## Save is unavailable or reports a conflict
 
