@@ -64,6 +64,8 @@ jobs:
             plugins/catgo-editor/assets/program/
             plugins/catgo-editor/build-inputs.json
             plugins/catgo-editor/build-dependencies.json
+      - name: Require the rebuilt UI to match the committed runtime
+        run: git diff --quiet -- plugins/catgo-editor/assets
       - run: node --test plugins/catgo-editor/tests/document.test.mjs
       - run: npm --prefix plugins/catgo-editor/ui run test:upstream
       - run: node plugins/catgo-editor/tests/mcp-client.mjs

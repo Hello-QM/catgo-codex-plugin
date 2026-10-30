@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.14",
+  "checkedAt": "2026-10-30T09:00:56.898637+00:00",
+  "result": "automated-pass",
+  "scope": "Local final packaged editor and official SDK in controlled protocol hosts; this receipt covers six core checks and the four file-action/rendering browser cases. Final publication CI and additional retained browser cases are recorded on the Release.",
+  "programSha256": "dcd12a307589ae16e904af8475a27e06ad8b9d96377e1fabcca294ceb64c9c86",
+  "runtimeZipSha256": "f80ab7d0e6320ca531f3c9f64cb8a109953f7cad2149bc1aef31c7d3beaa986c",
+  "nativeCodexHostVerified": false,
+  "nativeActivationAndAcceptanceDeferredByUser": true,
+  "localChecks": {
+    "verificationStepsPassed": 10,
+    "pythonRuntimeTestsPassed": 7,
+    "documentTestsPassed": 15,
+    "retainedUpstreamTestsPassed": 23,
+    "mcpProgramResources": 21,
+    "scalarWasmSlabCasesPassed": 17,
+    "browserCasesPassed": 4,
+    "browserAssertionGroupsPassed": 9
+  },
+  "fileActions": {
+    "hostBlobDownloadVerified": true,
+    "standardMcpContentsDownloadVerified": true,
+    "advertisedCapabilityLegacySchemaRetryVerified": true,
+    "actualBrowserDownloadsSavedAndReparsed": true,
+    "poscarCellCoordinatesAndConstraintsVerified": true,
+    "cifCellAndCoordinatesVerified": true,
+    "cifConstraintLossExplainedInUI": true,
+    "periodicExtxyzCellCoordinatesAndConstraintsVerified": true,
+    "aseAxisAndQuipIntegerMasksVerified": true,
+    "invalidConstraintsPreserveOpenDocumentVerified": true,
+    "invalidCopyNamesRejected": true,
+    "exportDoesNotSaveSourceOrResetHistoryVerified": true,
+    "cancelledAndUnsupportedDownloadsPreserveEditsVerified": true,
+    "toolbarFileChooserAndKeepEditingVerified": true,
+    "explicitDiscardAndMoleculeImportVerified": true,
+    "moleculeCellOnlyFormatsDisabledVerified": true,
+    "moleculeExportDoesNotInventCellVerified": true
+  },
+  "webglFallback": {
+    "qualityDpr": 2.5,
+    "fastDpr": 1,
+    "restoredDpr": 2.5,
+    "atoms": 201,
+    "partialSphereSegmentsBefore": [
+      20
+    ],
+    "partialSphereSegmentsAfter": [
+      20
+    ]
+  },
+  "allExitCodesZero": true,
+  "pageErrors": [],
+  "manifestUnchangedDuringVerification": true,
+  "allOwnedTestBrowserAndServerProcessesExited": true,
+  "protectedPrivateOriginalSHA256AndMtimeUnchanged": true,
+  "installedPluginChangedByThisTask": false,
+  "reinstalled": false,
+  "scientificJobsSubmitted": false,
+  "unverified": [
+    "Native Codex GUI activation and acceptance of 0.2.14",
+    "Native system-dialog and download-folder behavior",
+    "Available-WebGPU large-system backend in this follow-up",
+    "Native macOS and Windows",
+    "Unsaved native-tab state after local browser control became unavailable"
+  ],
+  "privacy": "Synthetic fixtures only for automated tests. Private scientific inputs, raw coordinates, hashes, local paths and native screenshots remain local.",
+  "documentation": "docs/file-actions-0.2.14.md",
+  "buildReproducibility": {
+    "explicitUiStrictConfigurationWithoutExtends": true,
+    "priorCandidateProgramDifferenceFullyCompared": true,
+    "priorCandidateOnlyDifferenceBytes": 13,
+    "ciRequiresAllRebuiltRuntimeAssetsEqualCommittedAssets": true
+  },
+  "testCompletion": {
+    "downloadListenerRegisteredBeforeClick": true,
+    "downloadDeadlineStartsAfterClick": true,
+    "downloadDeadlineSeconds": 30,
+    "downloadListenerAndTimerCleaned": true,
+    "inPlaceCutSkipsNavigationWait": true,
+    "originalCutGeometryPhaseAndSaveAssertionsRetained": true,
+    "cutCompletionDeadlineSeconds": 30
+  }
+}

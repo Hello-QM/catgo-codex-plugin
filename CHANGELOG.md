@@ -1,6 +1,21 @@
 # Changelog
 
-## 0.2.13 — 2026-10-30
+## 0.2.14 — 2026-10-30
+
+- Carry forward the host-mediated Export, Import / Export, extXYZ movement-mask
+  and WebGL performance-control fixes from the unreleased 0.2.13 candidate.
+- Fix the UI compiler configuration inside the plugin so building inside a
+  larger checkout cannot inherit its parent's strict-mode setting. Require
+  rebuilt CI assets to match the committed runtime before browser acceptance.
+- Capture download events before clicking and start the bounded download wait
+  after the click. A controlled slow-renderer case reproduced the old false
+  timeout despite a successful download; preserve actual-file reparsing checks.
+- Treat Apply Cut as an in-place operation and retain explicit atom-count,
+  phase, geometry and Save assertions. Keep exact CI builds for diagnosis.
+- Preserve the failed candidate's tag and CI history without publishing its
+  prepared Release. Native 0.2.14 activation and GUI acceptance remain deferred.
+
+## 0.2.13 — 2026-10-30 (unreleased candidate)
 
 - Export through the host download bridge using Codex's native Blob/name
   contract or the advertised MCP contents contract. Retry only an argument

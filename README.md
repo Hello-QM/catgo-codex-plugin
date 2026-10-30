@@ -34,10 +34,10 @@ launches Codex before installing. The shipped launcher uses that command;
 
 ## Use
 
-Version 0.2.13 fixes host-mediated downloads and the Import / Export toolbar,
+Version 0.2.14 fixes host-mediated downloads and the Import / Export toolbar,
 and provides a reversible WebGL performance toggle where WebGPU is unavailable.
-See the [file-action fixes and verification scope](docs/file-actions-0.2.13.md).
-Native 0.2.13 activation/acceptance is pending; the native results below apply
+See the [file-action fixes and verification scope](docs/file-actions-0.2.14.md).
+Native 0.2.14 activation/acceptance is pending; the native results below apply
 to their stated earlier versions.
 
 Version 0.2.12 fixes hidden-tab initialization warnings and own-save resource
