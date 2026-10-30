@@ -704,6 +704,7 @@
     "src/lib/symmetry/index.ts": "198b5d5682a452d371d676e5829ef2fd68e56ef29513e2a552c37a3949a019c3",
     "src/lib/symmetry/spacegroups.ts": "29eb24f6a5c6759e3ae4ba762829d212f11211d62a5e4762e7354f59ec2c8a3f",
     "src/lib/theme/index.ts": "e1a74f4edf22065e0992a2fcdabb4b46be6aa077abaca2d3c80ce992049147a6",
+    "src/lib/theme/themes.js": "434ff9481a53e2aa29daf7f0daed5051e0f47b01e04fe3ac4505656036fd9509",
     "src/lib/toast-state.svelte.ts": "6d22ef527f2958a216f5cfdd30fd69f9053603e279cac4337af4a3e3a87ff17b",
     "src/lib/trajectory/edit-apply.ts": "6300a042087e41f7405e83c316f3b7343b7f96dcc6def342443d8a6e77a0f44b",
     "src/lib/trajectory/operations.ts": "197f4f1312ce59c089a266cc8a95a47897036020ea7fd76d0eef7d9bc216523b",
@@ -757,6 +758,11 @@
       "repository": "https://github.com/Hello-QM/CatGO",
       "commit": "d6f3e1b0c941ce066ffdc653c151df1d55dfc4e2",
       "reason": "Restores the Import/Export toolbar pane, whose source was not extracted with the viewer graph."
+    },
+    "src/lib/theme/themes.js": {
+      "repository": "https://github.com/Hello-QM/CatGO",
+      "commit": "d6f3e1b0c941ce066ffdc653c151df1d55dfc4e2",
+      "reason": "CatGo's light/dark theme table; the viewer reads its variables, which nothing else defines."
     }
   }
 }

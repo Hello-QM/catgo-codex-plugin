@@ -224,10 +224,8 @@ class HostHandler(BaseHTTPRequestHandler):
                 return self.reply(200, page, "text/html; charset=utf-8")
             if url.path == "/editor":
                 html, _ = editor.snapshot_assets()
-                # Served as srcdoc, so the policy travels inside the document too. The
-                # CatGo theme variables replace the editor's dark-only fallbacks.
-                theme = (ROOT / "assets/claude-theme.css").read_text(encoding="utf-8")
-                html = html.replace("<head>", f'<head><meta http-equiv="Content-Security-Policy" content="{EDITOR_CSP}"><style>{theme}</style>', 1)
+                # Served as srcdoc, so the policy travels inside the document too.
+                html = html.replace("<head>", f'<head><meta http-equiv="Content-Security-Policy" content="{EDITOR_CSP}">', 1)
                 return self.reply(200, html, "text/html; charset=utf-8", {"Content-Security-Policy": EDITOR_CSP})
             if url.path == "/resource":
                 return self.reply(200, editor.program_resource(query.get("uri", [""])[0]))

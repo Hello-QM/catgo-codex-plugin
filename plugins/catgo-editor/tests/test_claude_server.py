@@ -77,7 +77,7 @@ class HostTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name) / "water.xyz"
-        self.path.write_text(WATER, encoding="utf-8")
+        self.path.write_bytes(WATER.encode())  # exact bytes; Windows text mode would add CR
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), viewer.HostHandler)
         self.httpd.daemon_threads = True
         self.httpd.token = "test-token"
@@ -137,10 +137,6 @@ class HostTests(unittest.TestCase):
             html = response.read().decode()
             self.assertIn("Content-Security-Policy", response.headers)
         self.assertIn('http-equiv="Content-Security-Policy"', html)
-        # CatGo theme variables, light and dark, replace the editor's dark-only fallbacks.
-        self.assertIn("--surface-bg:", html)
-        self.assertIn("--color-background-primary: var(--page-bg)", html)
-        self.assertIn("prefers-color-scheme: dark", html)
 
 
 class McpTests(unittest.TestCase):

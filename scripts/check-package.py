@@ -40,7 +40,7 @@ claude = json.loads((plugin / '.claude-plugin/plugin.json').read_text())
 assert claude['name'] == manifest['name'] and claude['version'] == manifest['version']
 # Claude Code also loads .mcp.json; the same server name replaces the Codex entry.
 assert claude['mcpServers'] == {'catgo-editor': {'command': 'python3', 'args': ['${CLAUDE_PLUGIN_ROOT}/claude_server.py']}}
-assert all((plugin / name).is_file() for name in ['claude_server.py', 'assets/claude-host.html', 'assets/claude-theme.css'])
+assert all((plugin / name).is_file() for name in ['claude_server.py', 'assets/claude-host.html'])
 assert (plugin / 'assets/editor.html').stat().st_size < 384 * 1024
 program = json.loads((plugin / 'assets/program-manifest.json').read_text())
 chunks = []
