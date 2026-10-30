@@ -11,8 +11,22 @@ file switching keeps the latest requested document subscribed to updates.
 The unavailable-GPU case verifies that genuine graphics errors remain visible.
 See the [fix report](lifecycle-fix-0.2.12.md) and
 [versioned receipt](../plugins/catgo-editor/acceptance/lifecycle-fix-0.2.12.json).
-These browser tests are not native Codex GUI evidence; native follow-up must be
-recorded separately with the loaded program hash.
+These browser tests are not native Codex GUI evidence.
+
+Native Linux acceptance of **0.2.12** was completed separately on **2026-10-29**.
+The actual loaded entry script was verified before and after the sequence.
+A fresh disposable 157-atom copy passed three native coordinate-edit/Save
+cycles, Undo/Redo after every Save, and complete history traversal across all
+three saves, without reopening or reloading the file for recovery. Independent
+disk parsing checked the edit, other coordinates at export precision, cell,
+species/counts and every selective-dynamics flag. The protected original's
+SHA256 and modification time were unchanged; the final native screenshot
+shows the saved state and 3D atoms. See the [native report](native-host-0.2.12.md)
+and [receipt](../plugins/catgo-editor/acceptance/native-edit-save-0.2.12.json).
+The report also records the screenshot timeout before editing and control-target
+remapping during extended history traversal. General host transport recovery,
+native hidden startup, conflicts, keyboard shortcuts and other operating systems
+remain outside this native check.
 
 Native Codex Linux acceptance of **0.2.11** was completed on 2026-10-21 in the
 actual right-panel file editor. A synthetic two-Si structure visibly changed
@@ -29,8 +43,8 @@ See the [native screenshots and reproduction steps](native-host-0.2.11.md)
 and separate [rendering receipt](../plugins/catgo-editor/acceptance/native-host-0.2.11.json)
 and [editing/save receipt](../plugins/catgo-editor/acceptance/native-edit-save-0.2.11.json).
 The private follow-up is a maintainer-reported result with local evidence.
-Native non-Linux rendering, save-conflict UI, keyboard shortcuts and undo/redo
-across Save remain unverified. The follow-up also recorded a hidden-tab startup
+Those 0.2.11 checks did not exercise native non-Linux rendering, save-conflict UI,
+keyboard shortcuts or Undo/Redo across Save. The follow-up also recorded a hidden-tab startup
 diagnostic and a side-panel automation interruption; reopening in the active
 chat completed the persistence check without an alert. See the native report
 for these limits.
@@ -50,11 +64,10 @@ The release contains two kinds of evidence:
   real WebGL pixels in an opaque-origin protocol harness, import protection,
   Miller-index slab generation, and periodic preview bond endpoints/lengths.
 
-The historical native confirmations listed above apply to earlier development
-versions; the separate 0.2.11 native receipt covers only the checks described
-at the top of this page, with editing/save coverage in its follow-up receipt.
-These records do not establish coverage of later releases or other operating
-systems. The browser harness identifies itself
+The historical native confirmations apply to their recorded development
+versions; the separate 0.2.11 and 0.2.12 receipts cover only their stated checks.
+They do not establish coverage of later releases or other operating systems.
+The browser harness identifies itself
 as a protocol test host; it is not the Codex desktop app. Receipts are retained
 under the plugin's `acceptance/` directory, with new results separately recorded.
 

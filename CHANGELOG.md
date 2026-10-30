@@ -19,6 +19,12 @@
   Undo/Redo, duplicate file input, delayed file/subscription changes and real
   external changes. Run it and the
   unavailable-GPU case in CI. Read the App SDK version from the package manifest.
+- Record native Linux acceptance on 2026-10-29: verify the actual 0.2.12 program,
+  three host-file Save cycles, Undo/Redo after every Save and complete history
+  traversal across the three saves on a fresh disposable 157-atom copy.
+  Independently verify disk geometry and preserve the original's SHA256 and
+  modification time. Keep private screenshots local and record control-layer
+  interruptions separately. No runtime change or reinstall was performed.
 
 ## 0.2.11 — 2026-10-20
 

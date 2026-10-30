@@ -65,3 +65,14 @@ remains a historical record of that older program, including its interruptions.
 Private scientific structures, paths, screenshots and session identifiers are
 not included in this public report. Test-file Save semantics and scientific
 structure validity remain separate checks.
+
+## Native follow-up
+
+On 2026-10-29, the actual 0.2.12 native Linux editor also passed three
+coordinate-edit/Save cycles, Undo/Redo after each Save and full history
+traversal across the three saves. The loaded entry-script fingerprint was
+verified, the protected original was unchanged, and no file reopen/reload or
+reinstall was used for recovery. The [separate native report](native-host-0.2.12.md)
+and [native receipt](../plugins/catgo-editor/acceptance/native-edit-save-0.2.12.json)
+include the control-layer observations and remaining limits; this does not
+promote the protocol-harness receipt into native evidence.

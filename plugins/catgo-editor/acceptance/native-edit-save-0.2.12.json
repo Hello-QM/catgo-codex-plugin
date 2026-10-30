@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.12",
+  "checkedAt": "2026-10-29T23:18:37.563438-07:00",
+  "result": "pass",
+  "scope": "Native Linux coordinate editing, three host-file Save cycles, Undo/Redo after each Save, and full traversal of history across all three saves.",
+  "host": {
+    "application": "Codex desktop file editor",
+    "installedHostPackage": "chatgpt",
+    "installedHostPackageVersion": "26.1023.51421",
+    "platform": "Linux",
+    "surface": "native right-panel file editor"
+  },
+  "programSha256": "925a11bb954a1beec67d7843119c9de540cfe4d3566b91e2fb6c92f1f503839b",
+  "entryScriptSha256": "3502e8fd46ef6823c9dd3ee91a6ae2331cc019745f0d625b35b6d5bc1707a1eb",
+  "actualLoadedProgramFingerprintVerifiedBeforeAndAfter": true,
+  "nativeCodexHostVerified": true,
+  "nativeRenderingVisuallyVerified": true,
+  "nativeCoordinateEditVerified": true,
+  "nativeSaveVerified": true,
+  "nativeUndoRedoAcrossSaveVerified": true,
+  "fixture": {
+    "atoms": 157,
+    "private": true,
+    "freshDisposableCopy": true,
+    "initialCopyMatchedOriginalSHA256": true
+  },
+  "saveCycles": [
+    {
+      "round": 1,
+      "firstAtomCumulativeCartesianDisplacementAngstrom": [
+        0.1,
+        0,
+        0
+      ],
+      "nativeSaveVerified": true,
+      "postSaveUndoVerified": true,
+      "postSaveRedoVerified": true,
+      "diskSemanticCheckVerified": true
+    },
+    {
+      "round": 2,
+      "firstAtomCumulativeCartesianDisplacementAngstrom": [
+        0.1,
+        0.1,
+        0
+      ],
+      "nativeSaveVerified": true,
+      "postSaveUndoVerified": true,
+      "postSaveRedoVerified": true,
+      "diskSemanticCheckVerified": true
+    },
+    {
+      "round": 3,
+      "firstAtomCumulativeCartesianDisplacementAngstrom": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "nativeSaveVerified": true,
+      "postSaveUndoVerified": true,
+      "postSaveRedoVerified": true,
+      "diskSemanticCheckVerified": true
+    }
+  ],
+  "history": {
+    "route": "native Undo and Redo buttons; reopen the coordinates panel to read the current geometry",
+    "allThreeEditsUndoneToInitialCoordinates": true,
+    "allThreeEditsRedoneToFinalSavedCoordinates": true,
+    "undoCreatesUnsavedState": true,
+    "redoRestoresSavedState": true,
+    "undoAloneDoesNotWriteDisk": true,
+    "fileReopenedOrReloadedForRecovery": false,
+    "fullTraversalControlAcknowledgement": "The automation call returned target unavailable; its completed Redo effect was independently confirmed from the final native state and screenshot.",
+    "fullTraversalUninterruptedControlChannelVerified": false
+  },
+  "save": {
+    "route": "native Save button through the host file-resource bridge",
+    "independentPOSCARParsingVerified": true,
+    "editedAtoms": 1,
+    "fractionalDecimalPlaces": 8,
+    "maxCartesianRoundingDifferenceAngstrom": 2.059596688752663e-07,
+    "cellDerivedRoundingBoundAngstrom": 2.0881737575e-07,
+    "allOtherCoordinatesUnchangedWithinExportPrecision": true,
+    "speciesAndCountsUnchanged": true,
+    "cellUnchanged": true,
+    "allSelectiveDynamicsFlagsUnchanged": true
+  },
+  "finalUI": {
+    "footer": "Saved \u00b7 157 atoms",
+    "saveDisabled": true,
+    "undoEnabled": true,
+    "redoDisabled": true,
+    "errorAlerts": [],
+    "visibleScreenshotRetainedLocally": true
+  },
+  "sourceProtection": {
+    "originalSHA256Unchanged": true,
+    "originalModificationTimeUnchanged": true,
+    "testCopyRetainsFinalEdit": true
+  },
+  "intermediateObservations": [
+    "Before editing, an initial screenshot request timed out; focusing the existing chat restored control without closing or reopening the file.",
+    "During the extended history traversal, automation target handles changed and the automation call returned target unavailable instead of a normal completion acknowledgement. The retained document still had its Redo history. A fresh handle, independent final native read-back and the final screenshot confirmed the complete saved geometry and clean state without reopening or reloading the file. This verifies the final history state, not an uninterrupted control channel throughout that optional traversal.",
+    "A final visible-document screenshot succeeded. These observations do not establish recovery from a genuinely disconnected host transport."
+  ],
+  "evidenceAvailability": "Maintainer-reported private-fixture result. Raw structures, absolute coordinates, screenshots, file hashes, paths and session identifiers remain local. The public receipt contains only aggregate verification results.",
+  "unverified": [
+    "Native hidden-tab startup",
+    "Native save-conflict UI",
+    "Keyboard shortcuts",
+    "Native fresh-reopen readback",
+    "Native macOS/Windows",
+    "Recovery from a genuinely disconnected host transport"
+  ],
+  "runtimeChanged": false,
+  "releaseVersionChanged": false,
+  "reinstalled": false,
+  "documentation": "docs/native-host-0.2.12.md"
+}
