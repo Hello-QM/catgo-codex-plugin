@@ -1,5 +1,17 @@
 # Verification scope
 
+Version **0.2.13** adds host-download and toolbar regressions. Actual browser
+downloads are saved and reparsed, covering native Blob, standard MCP contents
+and an advertised-capability/legacy-schema combination. Tests exercise the
+Import / Export file chooser, Keep editing and explicit Discard, error/cancel
+preservation, molecule format availability, and a reversible drawing-resolution
+toggle. A 201-atom fixture with partial occupancy checks real sphere geometry
+as well as drawing-buffer resolution. See the [fix report](file-actions-0.2.13.md).
+These are real packaged-editor/SDK tests in a controlled protocol host.
+Native 0.2.13 activation and GUI acceptance are deferred at the maintainer's
+request while local browser control is disabled; earlier native receipts do
+not establish native acceptance of the new version.
+
 Version **0.2.12** adds a lifecycle regression against the real bundled editor
 and official SDK in the protocol test host: hidden startup beyond the old
 three-second deadline, repeated hide/show, resource updates before a write

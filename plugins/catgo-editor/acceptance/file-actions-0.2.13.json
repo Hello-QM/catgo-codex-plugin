@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.13",
+  "checkedAt": "2026-10-30T08:05:52.733653+00:00",
+  "result": "automated-pass",
+  "scope": "Local final packaged editor and official SDK in controlled protocol hosts; publication CI is recorded on the release.",
+  "programSha256": "37eb5e30ac8cda0c2dc64c09c9ed4555948edffe2f597680675f4e292f0709c6",
+  "runtimeZipSha256": "dcbef218c9e0dc246426c99d2e3518048dc66518c1c79e6c687b26e5b6fe1b82",
+  "nativeCodexHostVerified": false,
+  "nativeActivationAndAcceptanceDeferredByUser": true,
+  "localChecks": {
+    "verificationStepsPassed": 10,
+    "pythonRuntimeTestsPassed": 7,
+    "documentTestsPassed": 15,
+    "retainedUpstreamTestsPassed": 23,
+    "mcpProgramResources": 21,
+    "scalarWasmSlabCasesPassed": 17,
+    "browserCasesPassed": 4,
+    "browserAssertionGroupsPassed": 9
+  },
+  "fileActions": {
+    "hostBlobDownloadVerified": true,
+    "standardMcpContentsDownloadVerified": true,
+    "advertisedCapabilityLegacySchemaRetryVerified": true,
+    "actualBrowserDownloadsSavedAndReparsed": true,
+    "poscarCellCoordinatesAndConstraintsVerified": true,
+    "cifCellAndCoordinatesVerified": true,
+    "cifConstraintLossExplainedInUI": true,
+    "periodicExtxyzCellCoordinatesAndConstraintsVerified": true,
+    "aseAxisAndQuipIntegerMasksVerified": true,
+    "invalidConstraintsPreserveOpenDocumentVerified": true,
+    "invalidCopyNamesRejected": true,
+    "exportDoesNotSaveSourceOrResetHistoryVerified": true,
+    "cancelledAndUnsupportedDownloadsPreserveEditsVerified": true,
+    "toolbarFileChooserAndKeepEditingVerified": true,
+    "explicitDiscardAndMoleculeImportVerified": true,
+    "moleculeCellOnlyFormatsDisabledVerified": true,
+    "moleculeExportDoesNotInventCellVerified": true
+  },
+  "webglFallback": {
+    "qualityDpr": 2.5,
+    "fastDpr": 1,
+    "restoredDpr": 2.5,
+    "atoms": 201,
+    "partialSphereSegmentsBefore": [
+      20
+    ],
+    "partialSphereSegmentsAfter": [
+      20
+    ]
+  },
+  "allExitCodesZero": true,
+  "pageErrors": [],
+  "manifestUnchangedDuringVerification": true,
+  "allOwnedTestBrowserAndServerProcessesExited": true,
+  "protectedPrivateOriginalSHA256AndMtimeUnchanged": true,
+  "installedPluginChangedByThisTask": false,
+  "reinstalled": false,
+  "scientificJobsSubmitted": false,
+  "unverified": [
+    "Native Codex GUI activation and acceptance of 0.2.13",
+    "Native system-dialog and download-folder behavior",
+    "Available-WebGPU large-system backend in this follow-up",
+    "Native macOS and Windows",
+    "Unsaved native-tab state after local browser control became unavailable"
+  ],
+  "privacy": "Synthetic fixtures only for automated tests. Private scientific inputs, raw coordinates, hashes, local paths and native screenshots remain local.",
+  "documentation": "docs/file-actions-0.2.13.md"
+}

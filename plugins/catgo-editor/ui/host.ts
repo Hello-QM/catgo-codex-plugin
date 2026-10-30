@@ -75,14 +75,20 @@ export function createHost(onFile: (file: FileRef) => void, onChange: (uri: stri
     async subscribe(uri: string) { await extensions.resources?.subscribe({uri}) },
     async unsubscribe(uri: string) { await extensions.resources?.unsubscribe({uri}) },
     async exportCopy(name: string, text: string) {
+      // Codex currently receives structured-cloned {blob,name} without the
+      // newer capability declaration. Other MCP hosts use embedded contents.
+      // A direct anchor inside the app sandbox can silently lose the download.
+      const nativeDownload = () => app.downloadFile({name,blob:new Blob([text],{type:'text/plain;charset=utf-8'})} as unknown as Parameters<App['downloadFile']>[0])
+      let result
       if (app.getHostCapabilities()?.downloadFile) {
-        const result = await app.downloadFile({contents:[{type:'resource',resource:{uri:`catgo-export:///${encodeURIComponent(name)}`,mimeType:'text/plain',text}}]})
-        if (result.isError) throw new Error('The host did not export the file. Your edits are preserved.')
-        return
-      }
-      const url = URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}))
-      const link = document.createElement('a'); link.href = url; link.download = name; link.click()
-      setTimeout(() => URL.revokeObjectURL(url),1000)
+        try { result = await app.downloadFile({contents:[{type:'resource',resource:{uri:`catgo-export:///${encodeURIComponent(name)}`,mimeType:'text/plain',text}}]}) }
+        catch (cause) {
+          // Retry only an argument-schema mismatch, never a denial/cancel.
+          if ((cause as {code?:number}).code !== -32602) throw cause
+          result = await nativeDownload()
+        }
+      } else result = await nativeDownload()
+      if (result.isError) throw new Error('The export was cancelled or refused by the host. Your edits are preserved.')
     },
     async context(file: FileRef, structure: {sites: {species: {element: string}[]; xyz: number[]}[]}, selected: number[]) {
       const atoms = selected.slice(0, 50).map(index => ({index: index + 1, element: structure.sites[index].species[0].element, xyz: structure.sites[index].xyz}))

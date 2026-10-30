@@ -2,7 +2,7 @@
   import { onMount, tick as flush } from 'svelte'
   import Structure from '$lib/structure/Structure.svelte'
   import type { AnyStructure } from '$lib/structure'
-  import { EditorDocument, fileFormat, serializeDocument, type FileRef, type ResourceValue } from './document'
+  import { EditorDocument, fileFormat, serializeDocument, type FileRef, type ResourceValue, type Format } from './document'
   import { createHost } from './host'
 
   const documentState = new EditorDocument()
@@ -12,6 +12,11 @@
   let status = $state('Connecting to Codex…')
   let error = $state('')
   let coordinatesOpen = $state(false)
+  let fileActionsOpen = $state(false)
+  let exportFormat = $state<Format>('poscar')
+  let exportName = $state('')
+  let exportNotice = $state('')
+  let exporting = $state(false)
   let coordinateAtomId = $state<number>()
   let coordinates = $state<(string | number)[]>(['0', '0', '0'])
   type OpenRequest = {kind:'host';file:FileRef;value?:ResourceValue} | {kind:'import';file:FileRef;value:ResourceValue}
@@ -127,7 +132,7 @@
       if (request !== generation) return
       documentState.load(file, value)
       openedKind = open.kind
-      selected = []; coordinatesOpen = false; coordinateAtomId = undefined; sync()
+      selected = []; coordinatesOpen = false; coordinateAtomId = undefined; fileActionsOpen = false; exportNotice = ''; sync()
       renderError = ''
       initializationError = ''
       await flush()
@@ -239,14 +244,34 @@
       catch (cause) { error = (cause as Error).message }
     }
   }
-  async function exportFile() {
-    if (!structure || !state.file) return
+  function defaultExportName(format: Format) {
+    const stem = (state.file?.name ?? 'structure').replace(/\.(poscar|vasp|cif|xyz|extxyz)$/i,'')
+    return `${stem}-export.${format === 'xyz' ? 'extxyz' : format}`
+  }
+  function toggleFileActions() {
+    if (!fileActionsOpen && state.file) {
+      exportFormat = fileFormat(state.file.name)
+      exportName = defaultExportName(exportFormat)
+    }
+    fileActionsOpen = !fileActionsOpen
+  }
+  async function exportFile(format?: Format, name?: string) {
+    if (!structure || !state.file || exporting) return
+    const selectedFormat = format ?? fileFormat(state.file.name)
+    const filename = name?.trim() ?? defaultExportName(selectedFormat)
+    error = ''; exportNotice = ''; exporting = true
+    const request = generation
     try {
-      const text = serializeDocument($state.snapshot(structure),fileFormat(state.file.name))
-      await host.exportCopy(state.file.name,text)
-    } catch (cause) { error = (cause as Error).message }
+      if (!filename || /[\\/\x00-\x1f]/.test(filename) || filename === '.' || filename === '..') throw new Error('Enter a file name without a folder path.')
+      if (fileFormat(filename) !== selectedFormat) throw new Error('The file extension must match the selected export format.')
+      const text = serializeDocument($state.snapshot(structure),selectedFormat)
+      await host.exportCopy(filename,text)
+      if (request === generation) exportNotice = `Download requested: ${filename}`
+    } catch (cause) { if (request === generation) error = `Export failed: ${(cause as Error).message}. Your edits are preserved.` }
+    finally { exporting = false }
   }
   onMount(() => {
+    viewerElement.addEventListener('catgo-editor-file-actions',toggleFileActions)
     const resize = new ResizeObserver(scheduleViewerCheck)
     resize.observe(viewerElement)
     document.addEventListener('visibilitychange', scheduleViewerCheck)
@@ -273,7 +298,7 @@
     const rejection = (event: PromiseRejectionEvent) => { renderError = `3D view error: ${event.reason?.message ?? String(event.reason)}` }
     window.addEventListener('error', failure)
     window.addEventListener('unhandledrejection', rejection)
-    return () => { disposed = true; generation++; importTicket++; clearTimeout(viewerCheckTimer); resize.disconnect(); document.removeEventListener('visibilitychange',scheduleViewerCheck); window.removeEventListener('keydown', key, true); window.removeEventListener('dragenter',dragOver,true); window.removeEventListener('dragover',dragOver,true); window.removeEventListener('dragleave',leave,true); window.removeEventListener('drop',dropFile,true); window.removeEventListener('error',failure); window.removeEventListener('unhandledrejection',rejection); void syncSubscription().catch(() => {}) }
+    return () => { disposed = true; generation++; importTicket++; clearTimeout(viewerCheckTimer); resize.disconnect(); viewerElement.removeEventListener('catgo-editor-file-actions',toggleFileActions); document.removeEventListener('visibilitychange',scheduleViewerCheck); window.removeEventListener('keydown', key, true); window.removeEventListener('dragenter',dragOver,true); window.removeEventListener('dragover',dragOver,true); window.removeEventListener('dragleave',leave,true); window.removeEventListener('drop',dropFile,true); window.removeEventListener('error',failure); window.removeEventListener('unhandledrejection',rejection); void syncSubscription().catch(() => {}) }
   })
 </script>
 
@@ -287,13 +312,14 @@
       <button onclick={redo} disabled={!state.canRedo} aria-label="Redo">Redo</button>
       <button onclick={openCoordinates} disabled={!structure} aria-label="Edit atom coordinates">Coordinates</button>
       <button onclick={shareSelection} disabled={!structure || selected.length === 0}>Send selection</button>
-      <button onclick={exportFile} disabled={!structure}>Export</button>
+      <button onclick={() => void exportFile()} disabled={!structure || exporting}>{exporting ? 'Exporting…' : 'Export'}</button>
       <button onclick={save} disabled={!state.canSave}>Save</button>
     </div>
   </header>
   {#if error}<div class="error" role="alert">{error}</div>{/if}
   {#if renderError}<div class="error" role="alert">{renderError}</div>{/if}
   {#if initializationError && !renderError}<div class="error" role="alert">{initializationError}</div>{/if}
+  {#if exportNotice}<div class="export-notice" role="status">{exportNotice}</div>{/if}
   {#if state.externalChange}
     <div class="notice">The file changed outside this editor.
       <button onclick={() => { if (state.file) pendingOpen = {kind:'host',file:state.file} }}>Reload…</button>
@@ -318,6 +344,23 @@
       <button onclick={move}>Apply coordinates</button>
       <button onclick={() => { coordinatesOpen = false }}>Close</button>
     </div>
+  {/if}
+  {#if fileActionsOpen && structure}
+    <section class="file-actions" role="region" aria-label="Import / Export">
+      <div class="file-actions-heading"><strong>Import / Export</strong><button aria-label="Close Import / Export" onclick={() => { fileActionsOpen = false }}>Close</button></div>
+      <p>Open one structure file. Unsaved edits are kept until you choose what to do.</p>
+      <button onclick={() => filePicker.click()} disabled={readingFile}>Open structure file…</button>
+      <div class="export-fields">
+        <label>Export format<select aria-label="Export format" bind:value={exportFormat} onchange={() => { exportName = defaultExportName(exportFormat) }}>
+          <option value="poscar" disabled={!structure.lattice}>POSCAR</option>
+          <option value="xyz">Extended XYZ</option>
+          <option value="cif" disabled={!structure.lattice}>CIF</option>
+        </select></label>
+        <label>File name<input aria-label="Export file name" bind:value={exportName} /></label>
+        <button onclick={() => void exportFile(exportFormat,exportName)} disabled={exporting}>Export file</button>
+      </div>
+      <p>{exportFormat === 'cif' ? 'CIF retains geometry and cell. Use POSCAR or Extended XYZ to retain fixed/free atom constraints.' : 'Exports the current coordinates, cell and fixed/free atom constraints to a separate copy.'}</p>
+    </section>
   {/if}
   <main bind:this={viewerElement}>
     {#if structure}
@@ -356,6 +399,13 @@
   .empty { padding:32px; text-align:center }
   .error,.notice { padding:10px 12px; background:#fff0e4; color:#8b3518; overflow-wrap:anywhere }
   .notice button { margin:4px }
+  .export-notice { padding:8px 12px; background:#16834b18; overflow-wrap:anywhere }
+  .file-actions { padding:10px 12px; border-bottom:1px solid #94a3b833; max-height:40%; overflow:auto }
+  .file-actions p { margin:7px 0; font-size:12px }
+  .file-actions-heading,.export-fields { display:flex; align-items:end; flex-wrap:wrap; gap:8px }
+  .file-actions-heading { align-items:center; justify-content:space-between }
+  .export-fields { margin-top:10px }
+  .export-fields input { width:240px; max-width:100% }
   .coordinates { display:flex; align-items:end; gap:8px; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid #94a3b833 }
   label { display:flex; flex-direction:column; gap:4px; font-size:12px }
   input { width:92px } input,select { padding:5px; border:1px solid #94a3b84d; border-radius:4px; background:var(--color-background-primary,#fff); color:inherit }

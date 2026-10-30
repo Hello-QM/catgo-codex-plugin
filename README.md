@@ -34,6 +34,12 @@ launches Codex before installing. The shipped launcher uses that command;
 
 ## Use
 
+Version 0.2.13 fixes host-mediated downloads and the Import / Export toolbar,
+and provides a reversible WebGL performance toggle where WebGPU is unavailable.
+See the [file-action fixes and verification scope](docs/file-actions-0.2.13.md).
+Native 0.2.13 activation/acceptance is pending; the native results below apply
+to their stated earlier versions.
+
 Version 0.2.12 fixes hidden-tab initialization warnings and own-save resource
 updates that reset the active editor. See the [lifecycle fix and verification](docs/lifecycle-fix-0.2.12.md).
 Native Linux acceptance on 2026-10-29 verified the loaded 0.2.12 program,
@@ -51,6 +57,10 @@ see the [native acceptance report and limits](docs/native-host-0.2.12.md).
   157-atom copy; see the [acceptance report](docs/native-host-0.2.11.md).
 - Import through **Open** or drag/drop, when allowed by the host. Imported copies
   use **Export**; they do not overwrite the previously opened host file.
+- **Import / Export** opens file actions with POSCAR, Extended XYZ and CIF export.
+  Use POSCAR or Extended XYZ to retain fixed/free constraints; CIF retains geometry
+  and cell. The performance gauge uses a drawing-resolution toggle when WebGPU
+  is unavailable, and restores the previous resolution when switched off.
 - Open **Build Tools → Slab** to cut by Miller indices, choose thickness/layers,
   termination, in-plane supercell, conventional cell and vacuum. Geometry is
   generated locally; this is not a relaxation or an energy calculation.

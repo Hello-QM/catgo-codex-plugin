@@ -79,3 +79,11 @@ jobs:
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:
           CATGO_EDITOR_TEST_NO_GPU: '1'
+      - name: File actions with the native Blob download contract
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs
+      - name: File export with the standard MCP download contract
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs export spec
+      - name: File export with a legacy download argument schema
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs export hybrid
+      - name: Large-structure rendering quality restores completely
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs large-performance

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.13 — 2026-10-30
+
+- Export through the host download bridge using Codex's native Blob/name
+  contract or the advertised MCP contents contract. Retry only an argument
+  schema mismatch; report cancellation/errors without clearing edits or
+  history. Show a download acknowledgement instead of silently relying on a
+  blocked sandbox anchor.
+- Connect the Import / Export toolbar button to the editor's supported file
+  actions. Import retains the existing unsaved-change confirmation; export
+  offers POSCAR, Extended XYZ and CIF with matching copy names. Explain that
+  CIF does not retain fixed/free constraints and disable cell-only formats
+  for molecules.
+- Restore extXYZ per-axis and whole-atom movement constraints when reading
+  exported files, using their declared column layout. Preserve declared force
+  vectors, avoid inferring forces from numeric logical fields, and reject
+  malformed or contradictory movement flags without replacing pending edits.
+- Provide a working WebGL rendering-resolution toggle when WebGPU is absent.
+  Keep the existing WebGPU mode where available. The fallback is reversible
+  and does not change atom geometry, fixed/free constraints or sphere meshes.
+- Add real SDK/browser download, file-chooser and 201-atom partial-occupancy
+  rendering regressions. Retain native-host and automated-test evidence as
+  separate gates; native 0.2.13 acceptance is deferred by the maintainer.
+
 ## 0.2.12 — 2026-10-21
 
 - Wait for a visible viewer layout before checking initialization. Recheck after

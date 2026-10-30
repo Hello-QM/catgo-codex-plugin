@@ -7,6 +7,7 @@ import { gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import { checkSlabAlignment } from './check-slab-alignment.mjs'
 import { checkUpstreamUpdates } from './check-upstream-updates.mjs'
+import { adaptFileToolbar, adaptStructureToolbarBindings } from './adapt-file-toolbar.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const slabAlignment = await checkSlabAlignment()
@@ -39,7 +40,7 @@ const editorBoundary = {
       // CatGo's test-only constructor check can skip a working canvas when a
       // sandbox omits that global. The real Three.js context creation decides
       // availability, and the editor boundary reports a genuine GPU failure.
-      const source = adaptBuildNotifications(original.replace(guard,'{#if typeof window !== `undefined`}'))
+      const source = adaptStructureToolbarBindings(adaptBuildNotifications(original.replace(guard,'{#if typeof window !== `undefined`}')))
       return compileEditorComponent(source,args.path)
     })
     builder.onLoad({filter:/[\\/]structure[\\/]StructureToolbar\.svelte$/},async args => {
@@ -47,7 +48,7 @@ const editorBoundary = {
       const source = await readFile(args.path,'utf8')
       const action = 'onclick={() => { build_pane_open = !build_pane_open }}'
       if (!source.includes(action)) throw new Error('Review the upstream Build toolbar action before building the editor.')
-      return compileEditorComponent(source.replace(action,action+"\n          aria-label={t('structure.build_tools')}"),args.path)
+      return compileEditorComponent(adaptFileToolbar(source.replace(action,action+"\n          aria-label={t('structure.build_tools')}")),args.path)
     })
     builder.onLoad({filter:/[\\/]structure[\\/]StructureScene\.svelte$/},async args => {
       catgoSourceFiles.add(args.path)

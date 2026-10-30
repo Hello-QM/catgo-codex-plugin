@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:upstream": "vitest run --environment happy-dom .test-build/upstream.test.mjs"
+    "test:upstream": "vitest run --config vitest.config.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "1.7.5",

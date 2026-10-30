@@ -2,6 +2,7 @@ import type { AnyStructure } from '$lib/structure'
 import { parse_any_structure } from '$lib/structure/parsers/dispatch'
 import { cart_to_frac } from '$lib/structure/parsers/dft-common'
 import { structure_to_cif_str, structure_to_poscar_str, structure_to_xyz_str } from '$lib/structure/export'
+import { restoreXyzProperties } from './xyz-properties'
 
 export type Format = 'cif' | 'xyz' | 'poscar'
 export type FileRef = { name: string; resourceUri: string }
@@ -36,6 +37,7 @@ export function parseDocument(text: string, name: string): AnyStructure {
     const flags = text.split(/\r?\n/)[1]?.match(/\bpbc=["']([^"']+)["']/i)?.[1].split(/\s+/)
     if (flags?.length === 3) structure.lattice.pbc = flags.map(flag => /^(T|true|1)$/i.test(flag)) as [boolean, boolean, boolean]
   }
+  if (format === 'xyz') restoreXyzProperties(structure,text)
   validateStructure(structure)
   return structure
 }
