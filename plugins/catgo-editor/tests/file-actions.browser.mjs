@@ -23,7 +23,8 @@ const html=await readFile(resolve(root,'assets/editor.html'),'utf8')
 const manifest=JSON.parse(await readFile(resolve(root,'assets/program-manifest.json'),'utf8'))
 const resources=Object.fromEntries(await Promise.all(manifest.chunks.map(async c=>[c.uri,{uri:c.uri,mimeType:'application/octet-stream',blob:(await readFile(resolve(root,'assets/program',c.filename))).toString('base64')}])) )
 const host=`<!doctype html><html><body style="margin:0"><iframe id="editor" sandbox="allow-scripts" style="width:100vw;height:100vh;border:0" src="/editor"></iframe><script>
-const record={text:${JSON.stringify(input)},etag:'v1',writes:[],downloads:[],mode:${JSON.stringify(contract)}};window.testRecord=record;
+const record={events:[],text:${JSON.stringify(input)},etag:'v1',writes:[],downloads:[],mode:${JSON.stringify(contract)}};window.testRecord=record;
+const trace=(event,detail={})=>record.events.push({event,at:performance.now(),...detail});
 const frame=document.getElementById('editor');
 const send=message=>frame.contentWindow.postMessage({jsonrpc:'2.0',...message},'*');
 window.addEventListener('message',async event=>{
@@ -38,6 +39,7 @@ window.addEventListener('message',async event=>{
  else if(message.method==='resources/subscribe'||message.method==='resources/unsubscribe')result={};
  else if(message.method==='openai/resources/write'){record.writes.push(message.params);record.text=message.params.text;record.etag='v'+(record.writes.length+1);result={outcome:'saved',etag:record.etag};}
  else if(message.method==='ui/download-file'){
+  trace('download-request',{id:message.id,mode:record.mode});
   if(record.mode==='denied'){send({id:message.id,result:{isError:true}});return;}
   if(record.mode==='unsupported'){send({id:message.id,error:{code:-32601,message:'Downloads unavailable'}});return;}
   let blob,name;
@@ -49,8 +51,9 @@ window.addEventListener('message',async event=>{
    ({blob,name}=message.params);
    if(!(blob instanceof Blob)||typeof name!=='string'){send({id:message.id,error:{code:-32602,message:'Expected native Blob and name'}});return;}
   }
-  record.downloads.push({name,text:await blob.text()});
-  const link=document.createElement('a'),url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);result={};
+  trace('blob-read-start',{name,bytes:blob.size});
+  record.downloads.push({name,text:await blob.text()});trace('blob-read-end',{name});
+  const link=document.createElement('a'),url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.append(link);link.click();trace('download-dispatched',{name});link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);result={};
  }else{send({id:message.id,error:{code:-32601,message:'Unsupported test method'}});return;}
  send({id:message.id,result});
 });
@@ -64,8 +67,23 @@ const server=createServer((request,response)=>{
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page
-const errors=[],passed=[]
+const errors=[],passed=[],downloadTimings=[]
 let renderingChecks
+async function downloadAfterClick(button){
+ // Listen before dispatch so an immediate download cannot be lost. Start the
+ // bounded download wait after the real click: actionability/renderer delays
+ // must not consume the download deadline before the request is even sent.
+ let onDownload,timer
+ const observed=new Promise(resolve=>{onDownload=resolve;page.on('download',onDownload)})
+ const started=Date.now()
+ try{
+  await button.click({noWaitAfter:true})
+  const clicked=Date.now()
+  const file=await Promise.race([observed,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('No download event within 30 seconds after Export click')),30000)})])
+  downloadTimings.push({clickMilliseconds:clicked-started,downloadMilliseconds:Date.now()-clicked,name:file.suggestedFilename()})
+  return file
+ }finally{clearTimeout(timer);page.off('download',onDownload)}
+}
 try{
  browser=await chromium.launch({...(process.env.CATGO_TEST_BROWSER?{executablePath:process.env.CATGO_TEST_BROWSER}:{}),headless:true,args:['--no-sandbox']})
  page=await browser.newPage({viewport:{width:960,height:720},acceptDownloads:true})
@@ -80,10 +98,7 @@ try{
  await editor.getByRole('button',{name:'Apply coordinates',exact:true}).click()
  await mkdir(evidence,{recursive:true})
  if(mode==='baseline-export'||mode==='export'||mode==='all'){
-  const download=page.waitForEvent('download',{timeout:7000})
-  download.catch(()=>{})
-  await editor.getByRole('button',{name:'Export',exact:true}).click()
-  const file=await download
+  const file=await downloadAfterClick(editor.getByRole('button',{name:'Export',exact:true}))
   const path=resolve(evidence,'native-export.poscar');await file.saveAs(path)
   const parsed=parseDocument(await readFile(path,'utf8'),'copy.poscar')
   assert.equal(parsed.sites.length,2);assert.ok(Math.abs(parsed.sites[0].xyz[0]-1.25)<1e-7)
@@ -99,10 +114,7 @@ try{
   const pane=editor.getByRole('region',{name:'Import / Export',exact:true})
   await pane.waitFor({timeout:5000})
   await pane.getByLabel('Export format',{exact:true}).selectOption('cif')
-  const download=page.waitForEvent('download',{timeout:7000})
-  download.catch(()=>{})
-  await pane.getByRole('button',{name:'Export file',exact:true}).click()
-  const file=await download;const path=resolve(evidence,'toolbar-export.cif');await file.saveAs(path)
+  const file=await downloadAfterClick(pane.getByRole('button',{name:'Export file',exact:true}));const path=resolve(evidence,'toolbar-export.cif');await file.saveAs(path)
   const parsed=parseDocument(await readFile(path,'utf8'),'copy.cif')
   assert.equal(parsed.sites.length,2);assert.ok(Math.abs(parsed.sites[0].xyz[0]-1.25)<1e-6)
   assert.ok(Math.abs(parsed.lattice.volume-1000)<1e-6)
@@ -117,9 +129,7 @@ try{
    assert.equal(await page.evaluate(()=>window.testRecord.downloads.length),downloadsBeforeInvalidName)
   }
   await filenameInput.fill('fixture-copy.extxyz')
-  const xyzDownload=page.waitForEvent('download',{timeout:7000});xyzDownload.catch(()=>{})
-  await pane.getByRole('button',{name:'Export file',exact:true}).click()
-  const xyzFile=await xyzDownload;const xyzPath=resolve(evidence,'periodic-export.extxyz');await xyzFile.saveAs(xyzPath)
+  const xyzFile=await downloadAfterClick(pane.getByRole('button',{name:'Export file',exact:true}));const xyzPath=resolve(evidence,'periodic-export.extxyz');await xyzFile.saveAs(xyzPath)
   const xyzParsed=parseDocument(await readFile(xyzPath,'utf8'),'copy.extxyz')
   assert.equal(xyzParsed.sites.length,2);assert.ok(Math.abs(xyzParsed.sites[0].xyz[0]-1.25)<1e-7)
   assert.deepEqual(xyzParsed.lattice.matrix,[[10,0,0],[0,10,0],[0,0,10]])
@@ -201,9 +211,7 @@ try{
   // label.control (the enabled select). Read the real option property instead.
   assert.equal(await filePane.getByRole('option',{name:'CIF',exact:true}).evaluate(option=>option.disabled),true)
   assert.equal(await filePane.getByRole('option',{name:'POSCAR',exact:true}).evaluate(option=>option.disabled),true)
-  const moleculeDownload=page.waitForEvent('download',{timeout:7000});moleculeDownload.catch(()=>{})
-  await filePane.getByRole('button',{name:'Export file',exact:true}).click()
-  const moleculeFile=await moleculeDownload;const path=resolve(evidence,'imported-export.extxyz');await moleculeFile.saveAs(path)
+  const moleculeFile=await downloadAfterClick(filePane.getByRole('button',{name:'Export file',exact:true}));const path=resolve(evidence,'imported-export.extxyz');await moleculeFile.saveAs(path)
   const molecule=parseDocument(await readFile(path,'utf8'),'molecule.extxyz')
   assert.equal(molecule.sites.length,3);assert.equal(molecule.sites[0].species[0].element,'O');assert.ok(!molecule.lattice)
   assert.equal(await page.evaluate(()=>window.testRecord.writes.length),0)
@@ -211,8 +219,8 @@ try{
  }
  assert.deepEqual(errors,[])
  await page.screenshot({path:resolve(evidence,'file-actions-final.png')})
- const result={programSha256:manifest.sha256,mode,contract,passed,renderingChecks,errors};await writeFile(resolve(evidence,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2))
+ const result={programSha256:manifest.sha256,mode,contract,passed,renderingChecks,downloadTimings,downloadEvents:await page.evaluate(()=>window.testRecord.events),errors};await writeFile(resolve(evidence,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2))
 }catch(error){
- if(page)console.error(JSON.stringify({errors,frames:await Promise.all(page.frames().map(async frame=>({url:frame.url(),text:(await frame.locator('body').innerText().catch(()=>'')),options:await frame.locator('option').evaluateAll(es=>es.map(e=>({text:e.textContent,value:e.value,disabled:e.disabled}))).catch(()=>[])})))},null,2))
+ if(page)console.error(JSON.stringify({errors,downloadTimings,downloadEvents:await page.evaluate(()=>window.testRecord.events).catch(()=>[]),frames:await Promise.all(page.frames().map(async frame=>({url:frame.url(),text:(await frame.locator('body').innerText().catch(()=>'')),options:await frame.locator('option').evaluateAll(es=>es.map(e=>({text:e.textContent,value:e.value,disabled:e.disabled}))).catch(()=>[])})))},null,2))
  throw error
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

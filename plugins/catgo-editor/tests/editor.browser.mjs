@@ -355,7 +355,9 @@ try {
    await pane.locator('.layer-control').getByRole('button',{name:n>4 ? '-' : '+',exact:true}).click()
   }
   assert.match(await pane.locator('.layer-value').innerText(),/4 layer/)
-  await pane.getByRole('button',{name:'Apply Cut',exact:true}).click({timeout:30000})
+  // This is an in-place WASM operation. Its completion is established below
+  // by the committed atom count and phase, without a navigation wait.
+  await pane.getByRole('button',{name:'Apply Cut',exact:true}).click({timeout:30000,noWaitAfter:true})
   await editor.locator('footer').filter({hasText:'24 atoms'}).waitFor({timeout:30000})
   await pane.locator('.phase-indicator').filter({hasText:'Preview'}).waitFor({timeout:30000})
   await editor.getByRole('button',{name:'Build Tools',exact:true}).click()
@@ -433,7 +435,9 @@ try {
   await frame.waitForFunction(()=>!document.querySelector('canvas')?.__scene?.getObjectByName('slab-preview-bonds'))
   await pane.getByLabel('Show bonds',{exact:true}).check()
   await frame.waitForFunction(()=>document.querySelector('canvas')?.__scene?.getObjectByName('slab-preview-bonds')?.children.some(child=>child.isInstancedMesh&&child.count>0))
-  await pane.getByRole('button',{name:'Apply Cut',exact:true}).click({timeout:30000})
+  // The following atom-count, phase and Save checks establish completion of
+  // the in-place cut; the button does not navigate to another document.
+  await pane.getByRole('button',{name:'Apply Cut',exact:true}).click({timeout:30000,noWaitAfter:true})
   await editor.locator('footer').filter({hasText:'48 atoms'}).waitFor({timeout:30000})
   await pane.locator('.phase-indicator').filter({hasText:'Preview'}).waitFor({timeout:30000})
   await editor.getByRole('button',{name:'Build Tools',exact:true}).click()
