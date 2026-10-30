@@ -32,6 +32,15 @@ assert server == {'type': 'stdio', 'command': 'python3',
 assert config['$schema'] == 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'
 assert (plugin / 'LICENSE').read_bytes() == (ROOT / 'LICENSE').read_bytes()
 assert (plugin / 'server.py').is_file()
+claude_catalog = json.loads((ROOT / '.claude-plugin/marketplace.json').read_text())
+assert claude_catalog['name'] == catalog['name']
+assert [entry['name'] for entry in claude_catalog['plugins']] == ['catgo-editor']
+assert (ROOT / claude_catalog['plugins'][0]['source']).resolve() == plugin
+claude = json.loads((plugin / '.claude-plugin/plugin.json').read_text())
+assert claude['name'] == manifest['name'] and claude['version'] == manifest['version']
+# Claude Code also loads .mcp.json; the same server name replaces the Codex entry.
+assert claude['mcpServers'] == {'catgo-editor': {'command': 'python3', 'args': ['${CLAUDE_PLUGIN_ROOT}/claude_server.py']}}
+assert all((plugin / name).is_file() for name in ['claude_server.py', 'assets/claude-host.html', 'assets/claude-theme.css'])
 assert (plugin / 'assets/editor.html').stat().st_size < 384 * 1024
 program = json.loads((plugin / 'assets/program-manifest.json').read_text())
 chunks = []

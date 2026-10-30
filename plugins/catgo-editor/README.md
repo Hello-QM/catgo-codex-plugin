@@ -12,6 +12,11 @@ codex plugin add catgo-editor@catgo
 ```
 
 Refresh plugin connections or start a new chat, then open a CIF/XYZ/POSCAR file.
+
+For Claude Code: `/plugin install catgo-editor --marketplace Hello-QM/catgo-codex-plugin`
+(or `/plugin marketplace add Hello-QM/catgo-codex-plugin`, then
+`/plugin install catgo-editor@catgo`). Ask Claude to view a structure file; it opens
+the editor in the desktop Browser pane through the `view_structure` tool.
 The 3D viewer supports coordinate editing, undo/redo, version-checked host Save,
 copy import/export and Miller-index slab cutting through **Build Tools → Slab**.
 Extensionless POSCAR/CONTCAR can be imported through **Open**. Imported copies

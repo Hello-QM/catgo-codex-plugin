@@ -26,6 +26,33 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
 当前配置调用 `python3`，只有 `python` 或 `py` 命令还不够。
 如不能安装或画面为空，见 [故障排查](docs/troubleshooting.md)。
 
+## Claude Code
+
+同一个包也能作为 Claude Code 插件安装。在 Claude Code 里运行：
+
+```text
+/plugin marketplace add Hello-QM/catgo-codex-plugin
+/plugin install catgo-editor@catgo
+```
+
+也可在终端运行 `claude plugin marketplace add Hello-QM/catgo-codex-plugin`
+和 `claude plugin install catgo-editor@catgo`，然后重开会话。
+
+直接让 Claude 看结构（例如“看一下 /path/to/CONTCAR”）。插件的 `view_structure`
+工具会启动一个本机页面，运行同一个预编译编辑器，Claude 把它打开在 Claude
+桌面端右侧的 Browser 栏里；之后的文件会直接载入已打开的页面。纯终端会话里，
+把 Claude 给出的链接复制到任意浏览器即可。无扩展名的 `POSCAR`/`CONTCAR*` 可直接打开。
+
+- **Save**：带版本检查写回原文件；磁盘上的文件被改动会自动重载，有未保存编辑时提示冲突。
+- **Export** 和所有下载都会弹出系统的“另存为”对话框，由你选择保存位置；浏览器不支持时，页面会让你输入路径（默认是原文件所在目录），覆盖已有文件前会先确认。
+- 工具栏的 **Import/Export** 面板（↑↓）：导出各种结构格式、图片，以及 QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK 输入文件，保存方式同上。
+- **Send selection**：选中原子后点它，再问 Claude，`get_viewer_selection` 会返回这些原子的序号、元素和笛卡尔坐标。
+- 页面顶栏也可以直接输入绝对路径打开文件。
+
+页面服务监听 `127.0.0.1:47821`（用 `CATGO_VIEWER_PORT` 修改），30 分钟没有页面连接后自动退出。
+API 需要随机 token（保存在 `~/.cache/catgo-viewer/`，仅本用户可读），且只读写
+CIF、XYZ、extXYZ、POSCAR/CONTCAR 和 `.vasp` 文件。
+
 ## 功能
 
 0.2.12 修复隐藏标签的初始化误报，以及自身保存通知导致的文档重载和撤销历史丢失。

@@ -481,6 +481,7 @@
     "src/lib/structure/FilePreviewPanel.svelte": "069b44fccb0324cf105a3cf00913d4bd487c8ce7426ba783010b8e9ee8bbf103",
     "src/lib/structure/FrozenAtomIndicators.svelte": "4b7bd5fbe4893c33030b54b82c75fc8de6b30cd12c0f8e81d0b74c180fac3813",
     "src/lib/structure/HeterostructurePane.svelte": "0fee37a79d414109d29e1b79d9d3c2b32bb402b163c9dce2cb47aac68567532a",
+    "src/lib/structure/IOPane.svelte": "201ea2a2fa7c0d378244485309615eadee452a9cd077d4d343eb29ebe08bcd3d",
     "src/lib/structure/Lattice.svelte": "436ac07c9b0cb09302e0e9f4264ace735f1d780c51c60f1774effc8131d6cd84",
     "src/lib/structure/LatticePane.svelte": "442746d29125a84a097665756163e259bd1371ebd0b13fe196f71e305a2f5a52",
     "src/lib/structure/MillerSlabCutterPane.svelte": "9bd9ee446d6ab0428e770390f966d3e8739b073348d3c82f1fe00b261d290c64",
@@ -750,5 +751,12 @@
     "00d4575bfcbd39cc35029b0f2d8f8fe782c25e7c",
     "a42235c553a9b6d06b61ed7261d6af60305955ce"
   ],
-  "reviewedUpstreamHead": "e711e6df7ff5668752b51429dba1097d1c5c8b1e"
+  "reviewedUpstreamHead": "e711e6df7ff5668752b51429dba1097d1c5c8b1e",
+  "additionalSources": {
+    "src/lib/structure/IOPane.svelte": {
+      "repository": "https://github.com/Hello-QM/CatGO",
+      "commit": "d6f3e1b0c941ce066ffdc653c151df1d55dfc4e2",
+      "reason": "Restores the Import/Export toolbar pane, whose source was not extracted with the viewer graph."
+    }
+  }
 }

@@ -32,6 +32,43 @@ For Windows, check that `python3 --version` runs from the environment that
 launches Codex before installing. The shipped launcher uses that command;
 `python` or `py` alone is insufficient. See [troubleshooting](docs/troubleshooting.md).
 
+## Claude Code
+
+The same package also installs as a Claude Code plugin. Inside Claude Code:
+
+```text
+/plugin marketplace add Hello-QM/catgo-codex-plugin
+/plugin install catgo-editor@catgo
+```
+
+Or from a shell: `claude plugin marketplace add Hello-QM/catgo-codex-plugin`
+and `claude plugin install catgo-editor@catgo`. Restart the session afterwards.
+
+Ask Claude to show a structure ("view /path/to/CONTCAR"). The plugin's
+`view_structure` tool starts a loopback page that runs the same prebuilt editor,
+and Claude opens it in the Claude desktop app's right-hand Browser pane. Later
+files load into the open page. In a terminal-only session, open the link Claude
+gives you in any browser. Extensionless `POSCAR`/`CONTCAR*` files open directly.
+
+- **Save** writes back to the file with a version check; a file changed on disk
+  reloads, or reports a conflict if you have unsaved edits.
+- **Export** and every download open the system Save dialog so you choose
+  where the file goes. Where the browser offers no such dialog, the page asks
+  for a path (starting in the open file's folder) and confirms before
+  replacing a file.
+- The toolbar's **Import/Export** pane (↑↓) exports structure formats,
+  figures and QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK
+  inputs, saved the same way.
+- **Send selection**, then ask Claude about the selection: the
+  `get_viewer_selection` tool returns those atoms' indices, elements and
+  Cartesian coordinates.
+- You can also type an absolute path into the page's top bar.
+
+The page server listens on `127.0.0.1:47821` (`CATGO_VIEWER_PORT` changes it)
+and exits after 30 minutes without a connected page. Its API needs a random
+token kept in `~/.cache/catgo-viewer/` (user-only permissions) and reads or
+writes only CIF, XYZ, extXYZ, POSCAR/CONTCAR and `.vasp` files.
+
 ## Use
 
 Version 0.2.12 fixes hidden-tab initialization warnings and own-save resource

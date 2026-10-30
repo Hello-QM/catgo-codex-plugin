@@ -27,7 +27,7 @@ async function compileEditorComponent(source, filename) {
 // at build time. The emitted editor has no DSH services or checkout dependency.
 const { catgoClientOptions, catgoSourceFiles, catgoDependencies, recordInputs } = await import('./catgo-bundler.mjs')
 const { adaptBuildNotifications } = await import('./adapt-build-notifications.mjs')
-const optionalPanes = new Set(['ChatPane','GestureProvider','GestureOverlay','GestureSettingsPane','AnalysisPane','WorkflowPane','IOPane','ServerPane','JobDetailPane','PluginHubPane','OptimizationPane','HpcUploadDialog','TerminalPanel','MonacoEditorPanel','Trajectory','CubePanel','ReticularPane'])
+const optionalPanes = new Set(['ChatPane','GestureProvider','GestureOverlay','GestureSettingsPane','AnalysisPane','WorkflowPane','ServerPane','JobDetailPane','PluginHubPane','OptimizationPane','HpcUploadDialog','TerminalPanel','MonacoEditorPanel','Trajectory','CubePanel','ReticularPane'])
 const editorBoundary = {
   name:'codex-editor-component-boundary',
   setup(builder) {
@@ -67,6 +67,25 @@ const editorBoundary = {
       // advertise an empty tool tab when enabling the supported build tools.
       const after = "const tab_defs = (STATIC_ONLY\n    ? all_tab_defs.filter((tab) => !STATIC_HIDDEN_TABS.has(tab.id))\n    : all_tab_defs).filter((tab) => tab.id !== 'reticular')"
       return compileEditorComponent(source.replace(before,after),args.path)
+    })
+    builder.onLoad({filter:/[\\/]structure[\\/]IOPane\.svelte$/},async args => {
+      catgoSourceFiles.add(args.path)
+      const source = await readFile(args.path,'utf8')
+      const search = /\n {8}<section class="action-section">\n {10}<h5>Search Database<\/h5>[\s\S]*?<\/section>/
+      if (!search.test(source)) throw new Error('Review the upstream I/O import actions before building the editor.')
+      // OPTIMADE search needs network access, which the editor's sandbox denies.
+      return compileEditorComponent(source.replace(search,''),args.path)
+    })
+    builder.onLoad({filter:/[\\/]structure[\\/]ExportPane\.svelte$/},async args => {
+      catgoSourceFiles.add(args.path)
+      const source = await readFile(args.path,'utf8')
+      const preview = '<div class="monaco-preview" bind:this={monaco_container}></div>'
+      const loader = 'const monaco = await import(`monaco-editor`)'
+      if (source.split(preview).length !== 2 || source.split(loader).length !== 2) throw new Error('Review the upstream export preview before building the editor.')
+      // Monaco arrives here without its stylesheet and renders unreadable. A
+      // themed, editable textarea keeps edit-before-download without Monaco.
+      const textarea = '<textarea class="monaco-preview" spellcheck="false" aria-label="Generated file" bind:value={generated_output[active_file]} style="display:block;box-sizing:border-box;padding:6px 8px;resize:vertical;overflow:auto;white-space:pre;font:12px/1.45 \'JetBrains Mono\',Menlo,Monaco,monospace;color:var(--text-color);background:var(--page-bg)"></textarea>'
+      return compileEditorComponent(source.replace(preview,textarea).replace(loader,"const monaco = await Promise.reject(new Error('Monaco is not packaged in this editor.'))"),args.path)
     })
     builder.onResolve({filter:/^(plotly\.js-dist-min|h5wasm|pdfjs-dist(?:\/.*)?|xlsx)$/},async args => {
       if (args.pluginData?.editorSideEffectsChecked) return undefined
