@@ -1,5 +1,5 @@
 {
-  "version": "0.2.13",
+  "version": "0.2.15",
   "catgoCommit": "c72cb350a32855eb5cc7f43b66c2f7d7e8141b8c",
   "catgoDevCommitReviewed": "c1bbd5fa89c372e8e51285fa3b568a403133e68b",
   "slabAlignment": {
@@ -45,9 +45,9 @@
   },
   "sourcePatchSha256": "3a0b087fb58791b72ede43652b91455f45000aace0dc14a9646319cb64d12fa3",
   "bundler": "standalone CatGo component/WASM adapter",
-  "htmlBytes": 251109,
-  "programBytes": 26700302,
-  "compressedProgramBytes": 8388009,
+  "htmlBytes": 251117,
+  "programBytes": 26705250,
+  "compressedProgramBytes": 8390126,
   "chunkCount": 22,
   "resourceLoading": "MCP resource bridge; gzip chunks",
   "sdk": {

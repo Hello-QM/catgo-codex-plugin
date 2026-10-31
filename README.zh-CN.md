@@ -45,7 +45,7 @@ Windows 用户应先检查 `python3 --version` 能否从启动 Codex 的环境�
 
 - **Save**：带版本检查写回原文件；磁盘上的文件被改动会自动重载，有未保存编辑时提示冲突。
 - **Export** 和所有下载都会弹出系统的“另存为”对话框，由你选择保存位置；浏览器不支持时，页面会让你输入路径（默认是原文件所在目录），覆盖已有文件前会先确认。
-- 工具栏的 **Import/Export** 面板（↑↓）：导出各种结构格式、图片，以及 QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK 输入文件，保存方式同上。
+- 工具栏的 **Import / Export**（↑↓）→ **More formats…** 打开 CatGo 自己的导出面板：各种结构格式、图片，以及 QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK 输入文件，保存方式同上。
 - **Send selection**：选中原子后点它，再问 Claude，`get_viewer_selection` 会返回这些原子的序号、元素和笛卡尔坐标。
 - 页面顶栏也可以直接输入绝对路径打开文件。
 
@@ -54,6 +54,12 @@ API 需要随机 token（保存在 `~/.cache/catgo-viewer/`，仅本用户可读
 CIF、XYZ、extXYZ、POSCAR/CONTCAR 和 `.vasp` 文件。
 
 ## 功能
+
+0.2.15 新增 Claude Code 支持，并在 Import / Export → **More formats…** 中加入 CatGo
+自己的导出面板；0.2.15 尚未在 Codex 原生环境中验收。
+0.2.14 修复宿主下载协议兼容和 Import / Export 工具栏入口；没有 WebGPU 时，
+性能按钮可切换并恢复 WebGL 绘制分辨率。见[修复与验证范围](docs/file-actions-0.2.14.md)。
+0.2.14 尚未在当前原生标签中激活和验收；下列原生结果仅适用于各自标明的旧版本。
 
 0.2.12 修复隐藏标签的初始化误报，以及自身保存通知导致的文档重载和撤销历史丢失。
 无需通过反复重开标签恢复编辑，见[修复与验证范围](docs/lifecycle-fix-0.2.12.md)。
@@ -69,6 +75,10 @@ CIF、XYZ、extXYZ、POSCAR/CONTCAR 和 `.vasp` 文件。
   0.2.11 已用全新的 157 原子测试副本完成 Linux 原生坐标编辑、保存前撤销/重做、
   实际落盘及重新打开读取核验，原件哈希和修改时间未变，详见[验收记录](docs/native-host-0.2.11.md)。
 - **Open** 和拖入的结构作为副本编辑，通过 **Export** 导出。
+- **Import / Export** 提供 POSCAR、Extended XYZ 和 CIF 导出；其中的 **More formats…**
+  打开 CatGo 的导出面板，可导出其他格式、计算输入文件和图片。
+  固定/自由标记请用 POSCAR 或 Extended XYZ 保留；CIF 仅保留结构几何和晶胞。
+  无 WebGPU 时，仪表盘按钮可降低绘制分辨率，再次点击恢复，不改变结构或球面网格。
 - **Build Tools → Slab** 支持 Miller 指数、厚度/层数、终止面、面内超胞、
   conventional cell 和真空层。结果是几何切割结构，不包含弛豫或能量计算。
 - 点击 **Send selection** 才把选中的原子信息发送到模型上下文。

@@ -1,6 +1,6 @@
 {
-  "version": "0.2.13",
-  "date": "2026-10-30",
+  "version": "0.2.15",
+  "date": "2026-10-31",
   "host": "direct scalar WASM verification",
   "nativeCodexHostVerified": false,
   "sourceAlignment": {

@@ -1,7 +1,7 @@
 # CatGo Structure Editor
 
 This package is the prebuilt local MCP runtime for CatGo's Codex structure editor.
-Version: 0.2.8. Requires Python 3.10+ available as `python3` and a desktop host
+Version: 0.2.15. Requires Python 3.10+ available as `python3` and a desktop host
 supporting MCP Apps and file entrypoints. No CatGo server or account is required.
 
 Install from the GitHub marketplace:
@@ -21,6 +21,13 @@ The 3D viewer supports coordinate editing, undo/redo, version-checked host Save,
 copy import/export and Miller-index slab cutting through **Build Tools → Slab**.
 Extensionless POSCAR/CONTCAR can be imported through **Open**. Imported copies
 use **Export**, while Save requires a writable host resource with a version token.
+The **Import / Export** toolbar opens supported file actions. Export uses the
+host's native Blob or standard MCP download bridge and reports its acknowledgement.
+POSCAR and Extended XYZ retain fixed/free constraints; CIF retains geometry/cell.
+**More formats…** there opens CatGo's export pane for other formats, calculation
+inputs and images; imports stay with the file actions, which keep unsaved edits.
+Where WebGPU is unavailable, the gauge toggles reversible WebGL drawing resolution.
+Native 0.2.15 activation/acceptance is pending; automated checks are separate.
 
 The Python server only serves packaged UI and resources. Host file reads/writes
 use the Codex bridge. The editor and WASM run inside the app surface; explicitly

@@ -93,3 +93,59 @@ test('non-orthogonal CIF expands explicit inversion symmetry and survives export
     reopened.sites.forEach((site,index)=>site.xyz.forEach((value,axis)=>assert.ok(Math.abs(value-parsed.sites[index].xyz[axis])<1e-5)))
   }
 })
+
+test('extXYZ restores per-axis movement flags without inventing forces from logical columns',() => {
+  const text='2\nLattice="10 0 0 0 10 0 0 0 10" Properties="species:S:1:pos:R:3:move_mask:L:1:selective_dynamics:L:3" pbc="T T T"\nSi 1.25 2 3 1 0 1 0\nSi 3 4 5 T T T F\n'
+  const parsed=parseDocument(text,'copy.extxyz')
+  assert.deepEqual(parsed.sites.map(s=>s.properties.selective_dynamics),[[false,true,false],[true,true,false]])
+  assert.deepEqual(parsed.sites.map(s=>s.properties.move_mask),[true,true])
+  assert.equal(parsed.sites[0].properties.force,undefined)
+  const poscar=parseDocument(serializeDocument(parsed,'poscar'),'copy.poscar')
+  assert.deepEqual(poscar.sites.map(s=>s.properties.selective_dynamics),[[false,true,false],[true,true,false]])
+})
+
+test('unquoted extXYZ metadata retains forces and movement flags at their declared offsets',() => {
+  const text='1\nProperties=species:S:1:pos:R:3:forces:R:3:selective_dynamics:L:3:move_mask:L:1\nO 0 0 0 0.1 -0.2 0.3 true false true true\n'
+  const parsed=parseDocument(text,'molecule.extxyz')
+  assert.deepEqual(parsed.sites[0].properties.force,[0.1,-0.2,0.3])
+  assert.deepEqual(parsed.sites[0].properties.selective_dynamics,[true,false,true])
+  assert.equal(parsed.sites[0].properties.move_mask,true)
+  assert.equal(parsed.lattice,undefined)
+})
+
+test('invalid or contradictory extXYZ constraints cannot replace the edited document',() => {
+  for(const flags of ['yes F T T','F F F T']){
+    const state=open();state.move(0,[0.1,0,0]);const before=JSON.stringify(state.structure)
+    const text='1\nProperties="species:S:1:pos:R:3:selective_dynamics:L:3:move_mask:L:1"\nO 0 0 0 '+flags+'\n'
+    assert.throws(()=>state.load({name:'invalid.extxyz',resourceUri:'host-resource://invalid'},{text,writable:true,etag:'v2'}),/constraint|movement|logical/i)
+    assert.equal(JSON.stringify(state.structure),before);assert.equal(state.dirty,true)
+    assert.equal(state.file.resourceUri,'host-resource://water')
+  }
+})
+
+test('extXYZ supports whole-atom masks and per-axis constraints independently',() => {
+  const masked=parseDocument('2\nProperties="species:S:1:pos:R:3:move_mask:L:1"\nO 0 0 0 F\nH 1 0 0 T\n','masks.extxyz')
+  assert.deepEqual(masked.sites.map(s=>s.properties.selective_dynamics),[[false,false,false],[true,true,true]])
+  const axes=parseDocument('2\nProperties="species:S:1:pos:R:3:selective_dynamics:L:3"\nO 0 0 0 F T F\nH 1 0 0 F F F\n','axes.extxyz')
+  assert.deepEqual(axes.sites.map(s=>s.properties.move_mask),[true,false])
+  assert.deepEqual(axes.sites.map(s=>s.properties.selective_dynamics),[[false,true,false],[false,false,false]])
+})
+
+test('ASE axis masks and QUIP integer movement masks retain the same physical constraints',() => {
+  for(const [layout,values,want,movable] of [
+    ['move_mask:L:3','F T F',[false,true,false],true],
+    ['move_mask:I:1','0',[false,false,false],false],
+    ['move_mask:I:3','0 1 0',[false,true,false],true],
+  ]){
+    const parsed=parseDocument('1\nProperties=species:S:1:pos:R:3:'+layout+'\nO 0 0 0 '+values+'\n','mask.extxyz')
+    assert.deepEqual(parsed.sites[0].properties.selective_dynamics,want)
+    assert.equal(parsed.sites[0].properties.move_mask,movable)
+  }
+})
+
+test('integer masks reject non-binary values and duplicate axis masks must agree',() => {
+  for(const text of [
+    '1\nProperties=species:S:1:pos:R:3:move_mask:I:1\nO 0 0 0 2\n',
+    '1\nProperties=species:S:1:pos:R:3:selective_dynamics:L:3:move_mask:L:3\nO 0 0 0 T F F F T F\n',
+  ])assert.throws(()=>parseDocument(text,'invalid.extxyz'),/constraint|movement|logical/i)
+})

@@ -54,19 +54,24 @@ async function base64(blob: Blob) {
   return btoa(binary)
 }
 
-// Hand a file to the host; a host without downloadFile gets a browser download.
-async function hostDownload(app: App, name: string, data: string | Blob, type: string) {
-  if (!app.getHostCapabilities()?.downloadFile) {
-    const url = URL.createObjectURL(typeof data === 'string' ? new Blob([data],{type:type || 'text/plain;charset=utf-8'}) : data)
-    const link = document.createElement('a'); link.href = url; link.download = name; link.click()
-    setTimeout(() => URL.revokeObjectURL(url),1000)
-    return
-  }
-  const uri = `catgo-export:///${encodeURIComponent(name)}`
-  const resource = typeof data === 'string' ? {uri, mimeType:type || 'text/plain', text:data}
-    : {uri, mimeType:data.type || type || 'application/octet-stream', blob:await base64(data)}
-  const result = await app.downloadFile({contents:[{type:'resource',resource}]})
-  if (result.isError) throw new Error('The host did not export the file. Your edits are preserved.')
+// Codex currently receives structured-cloned {blob,name} without the newer
+// capability declaration. Other MCP hosts use embedded contents. A direct
+// anchor inside the app sandbox can silently lose the download.
+async function hostDownload(app: App, name: string, data: string | Blob, type = '') {
+  const nativeDownload = () => app.downloadFile({name,blob:typeof data === 'string' ? new Blob([data],{type:type || 'text/plain;charset=utf-8'}) : data} as unknown as Parameters<App['downloadFile']>[0])
+  let result
+  if (app.getHostCapabilities()?.downloadFile) {
+    const uri = `catgo-export:///${encodeURIComponent(name)}`
+    const resource = typeof data === 'string' ? {uri, mimeType:type || 'text/plain', text:data}
+      : {uri, mimeType:data.type || type || 'application/octet-stream', blob:await base64(data)}
+    try { result = await app.downloadFile({contents:[{type:'resource',resource}]}) }
+    catch (cause) {
+      // Retry only an argument-schema mismatch, never a denial/cancel.
+      if ((cause as {code?:number}).code !== -32602) throw cause
+      result = await nativeDownload()
+    }
+  } else result = await nativeDownload()
+  if (result.isError) throw new Error('The export was cancelled or refused by the host. Your edits are preserved.')
 }
 
 export function createHost(onFile: (file: FileRef) => void, onChange: (uri: string) => void) {
@@ -98,7 +103,7 @@ export function createHost(onFile: (file: FileRef) => void, onChange: (uri: stri
     },
     async subscribe(uri: string) { await extensions.resources?.subscribe({uri}) },
     async unsubscribe(uri: string) { await extensions.resources?.unsubscribe({uri}) },
-    async exportCopy(name: string, text: string) { await hostDownload(app, name, text, 'text/plain') },
+    async exportCopy(name: string, text: string) { await hostDownload(app, name, text) },
     async context(file: FileRef, structure: {sites: {species: {element: string}[]; xyz: number[]}[]}, selected: number[]) {
       const atoms = selected.slice(0, 50).map(index => ({index: index + 1, element: structure.sites[index].species[0].element, xyz: structure.sites[index].xyz}))
       await app.updateModelContext({content: [{type: 'text', text: `CatGo editor: ${file.name}, ${structure.sites.length} atoms; selected atoms: ${JSON.stringify(atoms)}`}], structuredContent: {filename: file.name, atomCount: structure.sites.length, selectedAtoms: atoms}})

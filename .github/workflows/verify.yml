@@ -52,6 +52,20 @@ jobs:
       - run: node scripts/apply-vendor-patches.mjs
       - run: node plugins/catgo-editor/scripts/build-ui.mjs
       - run: python3 scripts/check-package.py
+      - name: Retain the exact viewer build for provenance and failure diagnosis
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          path: |
+            plugins/catgo-editor/assets/editor.html
+            plugins/catgo-editor/assets/program-manifest.json
+            plugins/catgo-editor/assets/build-receipt.json
+            plugins/catgo-editor/assets/program/
+            plugins/catgo-editor/build-inputs.json
+            plugins/catgo-editor/build-dependencies.json
+      - name: Require the rebuilt UI to match the committed runtime
+        run: git diff --quiet -- plugins/catgo-editor/assets
       - run: node --test plugins/catgo-editor/tests/document.test.mjs
       - run: npm --prefix plugins/catgo-editor/ui run test:upstream
       - run: node plugins/catgo-editor/tests/mcp-client.mjs
@@ -79,3 +93,11 @@ jobs:
       - run: node plugins/catgo-editor/tests/editor.browser.mjs
         env:
           CATGO_EDITOR_TEST_NO_GPU: '1'
+      - name: File actions with the native Blob download contract
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs
+      - name: File export with the standard MCP download contract
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs export spec
+      - name: File export with a legacy download argument schema
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs export hybrid
+      - name: Large-structure rendering quality restores completely
+        run: node plugins/catgo-editor/tests/file-actions.browser.mjs large-performance

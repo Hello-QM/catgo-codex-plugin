@@ -56,9 +56,10 @@ gives you in any browser. Extensionless `POSCAR`/`CONTCAR*` files open directly.
   where the file goes. Where the browser offers no such dialog, the page asks
   for a path (starting in the open file's folder) and confirms before
   replacing a file.
-- The toolbar's **Import/Export** pane (↑↓) exports structure formats,
-  figures and QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK
-  inputs, saved the same way.
+- The toolbar's **Import / Export** (↑↓) → **More formats…** opens CatGo's
+  export pane: structure formats, figures and
+  QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK inputs, saved
+  the same way.
 - **Send selection**, then ask Claude about the selection: the
   `get_viewer_selection` tool returns those atoms' indices, elements and
   Cartesian coordinates.
@@ -70,6 +71,14 @@ token kept in `~/.cache/catgo-viewer/` (user-only permissions) and reads or
 writes only CIF, XYZ, extXYZ, POSCAR/CONTCAR and `.vasp` files.
 
 ## Use
+
+Version 0.2.15 adds Claude Code support and CatGo's own export pane under
+Import / Export → **More formats…**; native 0.2.15 acceptance in Codex is pending.
+Version 0.2.14 fixes host-mediated downloads and the Import / Export toolbar,
+and provides a reversible WebGL performance toggle where WebGPU is unavailable.
+See the [file-action fixes and verification scope](docs/file-actions-0.2.14.md).
+Native 0.2.14 activation/acceptance is pending; the native results below apply
+to their stated earlier versions.
 
 Version 0.2.12 fixes hidden-tab initialization warnings and own-save resource
 updates that reset the active editor. See the [lifecycle fix and verification](docs/lifecycle-fix-0.2.12.md).
@@ -88,6 +97,12 @@ see the [native acceptance report and limits](docs/native-host-0.2.12.md).
   157-atom copy; see the [acceptance report](docs/native-host-0.2.11.md).
 - Import through **Open** or drag/drop, when allowed by the host. Imported copies
   use **Export**; they do not overwrite the previously opened host file.
+- **Import / Export** opens file actions with POSCAR, Extended XYZ and CIF export;
+  **More formats…** there opens CatGo's export pane for other formats,
+  calculation inputs and images.
+  Use POSCAR or Extended XYZ to retain fixed/free constraints; CIF retains geometry
+  and cell. The performance gauge uses a drawing-resolution toggle when WebGPU
+  is unavailable, and restores the previous resolution when switched off.
 - Open **Build Tools → Slab** to cut by Miller indices, choose thickness/layers,
   termination, in-plane supercell, conventional cell and vacuum. Geometry is
   generated locally; this is not a relaxation or an energy calculation.

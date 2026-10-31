@@ -1,6 +1,6 @@
 {
   "name": "catgo-editor",
-  "version": "0.2.13",
+  "version": "0.2.15",
   "description": "CatGo 3D structure viewer/editor for Claude Code: open CIF, XYZ and POSCAR files in the desktop Browser pane, edit coordinates and save with version checks.",
   "author": {
     "name": "CatGo"

@@ -1,16 +1,16 @@
 # Changelog
 
-## 0.2.13 — 2026-10-30
+## 0.2.15 — 2026-10-31
 
-- Restore the toolbar's Import/Export pane, which the build had replaced with an
-  empty component while keeping its button. Import offers Open File and Paste
-  Content; Export offers structure formats, figures (PNG, GLB/OBJ) and the QE,
-  VASP, LAMMPS, CP2K, Gaussian, GROMACS, ORCA, ABACUS, AMBER and SPARK input
-  generators. OPTIMADE database search stays out: the sandbox has no network.
+- Import / Export's file actions gain **More formats…**, which opens CatGo's
+  own export pane: structure formats, figures (PNG, GLB/OBJ) and the QE, VASP,
+  LAMMPS, CP2K, Gaussian, GROMACS, ORCA, ABACUS, AMBER and SPARK input
+  generators. The build had replaced that pane with an empty component. It is
+  export-only here: imports stay with the editor's file actions, which keep
+  unsaved edits, and OPTIMADE search needs network access the sandbox denies.
   `IOPane.svelte` is vendored from CatGo `d6f3e1b0` and recorded in `SOURCE.json`.
-- Route every CatGo download through the host's `downloadFile` via CatGo's
-  `globalThis.download` hook, including binary images; hosts without that
-  capability still get a browser download.
+- Route every CatGo download, binary images included, through the same host
+  download as Export via CatGo's `globalThis.download` hook.
 - Replace the export preview's Monaco editor, which arrived without its
   stylesheet and rendered unreadable, with a themed editable textarea. Monaco
   leaves the bundle (program 8.0 MiB).
@@ -36,6 +36,44 @@
   (`showSaveFilePicker`, the desktop portal's file chooser in the Claude app).
   Where a browser has no such dialog, the page asks for a path, starting in the
   open file's folder, and replaces an existing file only after confirmation.
+
+## 0.2.14 — 2026-10-30
+
+- Carry forward the host-mediated Export, Import / Export, extXYZ movement-mask
+  and WebGL performance-control fixes from the unreleased 0.2.13 candidate.
+- Fix the UI compiler configuration inside the plugin so building inside a
+  larger checkout cannot inherit its parent's strict-mode setting. Require
+  rebuilt CI assets to match the committed runtime before browser acceptance.
+- Capture download events before clicking and start the bounded download wait
+  after the click. A controlled slow-renderer case reproduced the old false
+  timeout despite a successful download; preserve actual-file reparsing checks.
+- Treat Apply Cut as an in-place operation and retain explicit atom-count,
+  phase, geometry and Save assertions. Keep exact CI builds for diagnosis.
+- Preserve the failed candidate's tag and CI history without publishing its
+  prepared Release. Native 0.2.14 activation and GUI acceptance remain deferred.
+
+## 0.2.13 — 2026-10-30 (unreleased candidate)
+
+- Export through the host download bridge using Codex's native Blob/name
+  contract or the advertised MCP contents contract. Retry only an argument
+  schema mismatch; report cancellation/errors without clearing edits or
+  history. Show a download acknowledgement instead of silently relying on a
+  blocked sandbox anchor.
+- Connect the Import / Export toolbar button to the editor's supported file
+  actions. Import retains the existing unsaved-change confirmation; export
+  offers POSCAR, Extended XYZ and CIF with matching copy names. Explain that
+  CIF does not retain fixed/free constraints and disable cell-only formats
+  for molecules.
+- Restore extXYZ per-axis and whole-atom movement constraints when reading
+  exported files, using their declared column layout. Preserve declared force
+  vectors, avoid inferring forces from numeric logical fields, and reject
+  malformed or contradictory movement flags without replacing pending edits.
+- Provide a working WebGL rendering-resolution toggle when WebGPU is absent.
+  Keep the existing WebGPU mode where available. The fallback is reversible
+  and does not change atom geometry, fixed/free constraints or sphere meshes.
+- Add real SDK/browser download, file-chooser and 201-atom partial-occupancy
+  rendering regressions. Retain native-host and automated-test evidence as
+  separate gates; native 0.2.13 acceptance is deferred by the maintainer.
 
 ## 0.2.12 — 2026-10-21
 

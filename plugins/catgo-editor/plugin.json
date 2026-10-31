@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "catgo-editor",
-  "version": "0.2.13",
+  "version": "0.2.15",
   "description": "A CatGo structure file editor with host-managed reads and version-checked saves.",
   "author": {
     "name": "CatGo"
