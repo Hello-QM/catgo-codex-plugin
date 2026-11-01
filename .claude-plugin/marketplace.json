@@ -1,0 +1,17 @@
+{
+  "name": "catgo",
+  "owner": {
+    "name": "CatGo"
+  },
+  "metadata": {
+    "description": "CatGo plugins for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "catgo-editor",
+      "source": "./plugins/catgo-editor",
+      "description": "CatGo 3D structure viewer/editor beside Claude Code chat",
+      "category": "productivity"
+    }
+  ]
+}

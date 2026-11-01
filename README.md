@@ -32,8 +32,48 @@ For Windows, check that `python3 --version` runs from the environment that
 launches Codex before installing. The shipped launcher uses that command;
 `python` or `py` alone is insufficient. See [troubleshooting](docs/troubleshooting.md).
 
+## Claude Code
+
+The same package also installs as a Claude Code plugin. Inside Claude Code:
+
+```text
+/plugin marketplace add Hello-QM/catgo-codex-plugin
+/plugin install catgo-editor@catgo
+```
+
+Or from a shell: `claude plugin marketplace add Hello-QM/catgo-codex-plugin`
+and `claude plugin install catgo-editor@catgo`. Restart the session afterwards.
+
+Ask Claude to show a structure ("view /path/to/CONTCAR"). The plugin's
+`view_structure` tool starts a loopback page that runs the same prebuilt editor,
+and Claude opens it in the Claude desktop app's right-hand Browser pane. Later
+files load into the open page. In a terminal-only session, open the link Claude
+gives you in any browser. Extensionless `POSCAR`/`CONTCAR*` files open directly.
+
+- **Save** writes back to the file with a version check; a file changed on disk
+  reloads, or reports a conflict if you have unsaved edits.
+- **Export** and every download open the system Save dialog so you choose
+  where the file goes. Where the browser offers no such dialog, the page asks
+  for a path (starting in the open file's folder) and confirms before
+  replacing a file.
+- The toolbar's **Import / Export** (↑↓) → **More formats…** opens CatGo's
+  export pane: structure formats, figures and
+  QE/VASP/LAMMPS/CP2K/Gaussian/GROMACS/ORCA/ABACUS/AMBER/SPARK inputs, saved
+  the same way.
+- **Send selection**, then ask Claude about the selection: the
+  `get_viewer_selection` tool returns those atoms' indices, elements and
+  Cartesian coordinates.
+- You can also type an absolute path into the page's top bar.
+
+The page server listens on `127.0.0.1:47821` (`CATGO_VIEWER_PORT` changes it)
+and exits after 30 minutes without a connected page. Its API needs a random
+token kept in `~/.cache/catgo-viewer/` (user-only permissions) and reads or
+writes only CIF, XYZ, extXYZ, POSCAR/CONTCAR and `.vasp` files.
+
 ## Use
 
+Version 0.2.15 adds Claude Code support and CatGo's own export pane under
+Import / Export → **More formats…**; native 0.2.15 acceptance in Codex is pending.
 Version 0.2.14 fixes host-mediated downloads and the Import / Export toolbar,
 and provides a reversible WebGL performance toggle where WebGPU is unavailable.
 See the [file-action fixes and verification scope](docs/file-actions-0.2.14.md).
@@ -57,7 +97,9 @@ see the [native acceptance report and limits](docs/native-host-0.2.12.md).
   157-atom copy; see the [acceptance report](docs/native-host-0.2.11.md).
 - Import through **Open** or drag/drop, when allowed by the host. Imported copies
   use **Export**; they do not overwrite the previously opened host file.
-- **Import / Export** opens file actions with POSCAR, Extended XYZ and CIF export.
+- **Import / Export** opens file actions with POSCAR, Extended XYZ and CIF export;
+  **More formats…** there opens CatGo's export pane for other formats,
+  calculation inputs and images.
   Use POSCAR or Extended XYZ to retain fixed/free constraints; CIF retains geometry
   and cell. The performance gauge uses a drawing-resolution toggle when WebGPU
   is unavailable, and restores the previous resolution when switched off.

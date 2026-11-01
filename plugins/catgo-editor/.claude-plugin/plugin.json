@@ -1,0 +1,28 @@
+{
+  "name": "catgo-editor",
+  "version": "0.2.15",
+  "description": "CatGo 3D structure viewer/editor for Claude Code: open CIF, XYZ and POSCAR files in the desktop Browser pane, edit coordinates and save with version checks.",
+  "author": {
+    "name": "CatGo"
+  },
+  "homepage": "https://github.com/Hello-QM/catgo-codex-plugin",
+  "repository": "https://github.com/Hello-QM/catgo-codex-plugin",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "chemistry",
+    "materials",
+    "structure",
+    "cif",
+    "poscar",
+    "xyz",
+    "viewer"
+  ],
+  "mcpServers": {
+    "catgo-editor": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/claude_server.py"
+      ]
+    }
+  }
+}

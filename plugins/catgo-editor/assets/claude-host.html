@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CatGo Viewer</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f9;--fg:#1f2328;--muted:#6b7280;--line:#d8dce2;--field:#fff;--ok:#16a34a;--off:#9ca3af;--accent:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1d21;--fg:#e6e6e6;--muted:#9ca3af;--line:#3a3d44;--field:#26282d}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:13px system-ui,sans-serif}
+body{display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line);min-height:36px}
+header strong{font-weight:600;white-space:nowrap}
+#dot{width:8px;height:8px;border-radius:50%;background:var(--off);flex:none}
+#dot.on{background:var(--ok)}
+header form{flex:1;display:flex;min-width:0}
+#path{flex:1;min-width:0;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--fg);font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+#toast{position:fixed;right:12px;bottom:12px;max-width:min(560px,calc(100vw - 24px));padding:8px 12px;border-radius:8px;background:var(--fg);color:var(--bg);opacity:0;transition:opacity .2s;pointer-events:none;overflow-wrap:anywhere}
+#toast.show{opacity:.92}
+iframe{flex:1;width:100%;border:0;display:block}
+dialog{width:min(640px,calc(100vw - 32px));padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+dialog::backdrop{background:#0006}
+dialog form{display:flex;flex-direction:column;gap:8px}
+#saveas-path{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--fg);font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+#saveas-note{margin:0;min-height:1.2em;color:var(--muted)}
+#saveas-note.warn{color:#d97706}
+.actions{display:flex;justify-content:flex-end;gap:8px}
+.actions button{padding:5px 12px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--fg);font:inherit;cursor:pointer}
+#saveas-ok{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+<header>
+  <span id="dot" title="Disconnected"></span>
+  <strong>CatGo</strong>
+  <form id="open"><input id="path" spellcheck="false" placeholder="Absolute path to a CIF / XYZ / POSCAR file, then Enter" aria-label="Structure file path"></form>
+</header>
+<iframe id="editor" title="CatGo structure editor" sandbox="allow-scripts allow-downloads"></iframe>
+<div id="toast" role="status"></div>
+<dialog id="saveas" aria-labelledby="saveas-title">
+  <form>
+    <strong id="saveas-title">Save as</strong>
+    <input id="saveas-path" spellcheck="false" aria-label="Save to path">
+    <p id="saveas-note"></p>
+    <div class="actions"><button type="button" id="saveas-cancel">Cancel</button><button id="saveas-ok">Save</button></div>
+  </form>
+</dialog>
+<script>
+const token=new URLSearchParams(location.search).get('token')||''
+const API={'X-CatGo-Viewer':token,'Content-Type':'application/json'}
+const frame=document.getElementById('editor'), pathInput=document.getElementById('path'), dot=document.getElementById('dot'), toast=document.getElementById('toast')
+const dark=matchMedia('(prefers-color-scheme: dark)')
+const subscribed=new Set()
+let ready=false, current=null, shown=null, toastTimer
+const send=message=>frame.contentWindow.postMessage({jsonrpc:'2.0',...message},'*')
+const notify=text=>{toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),4000)}
+const pathOf=uri=>decodeURIComponent(uri.slice('catgo-file:'.length))
+async function api(method,path,body){
+  const response=await fetch(path,{method,headers:API,body:body===undefined?undefined:JSON.stringify(body)})
+  const value=await response.json()
+  if(!response.ok)throw new Error(value.error||`HTTP ${response.status}`)
+  return value
+}
+function show(file){
+  current=file
+  pathInput.value=file.path
+  document.title=`${file.name} · CatGo`
+  if(!ready||shown===file.uri+file.serial)return
+  shown=file.uri+file.serial
+  send({method:'ui/notifications/tool-input',params:{arguments:{file:{name:file.name,resourceUri:file.uri}}}})
+}
+// The system Save dialog when the browser offers it: true saved, false cancelled,
+// null unavailable (the pane may refuse native pickers).
+async function saveWithPicker(name,content){
+  if(!window.showSaveFilePicker)return null
+  let handle
+  try{handle=await showSaveFilePicker({suggestedName:name,id:'catgo-export'})}
+  catch(error){return error.name==='AbortError'?false:null}
+  const writable=await handle.createWritable()
+  await writable.write('blob' in content?Uint8Array.from(atob(content.blob),character=>character.charCodeAt(0)):content.text)
+  await writable.close()
+  notify(`Saved ${handle.name}`)
+  return true
+}
+// Otherwise ask for a path, starting in the open file's folder.
+function saveWithDialog(name,content){
+  const dialog=document.getElementById('saveas'), input=document.getElementById('saveas-path'), note=document.getElementById('saveas-note')
+  const folder=current?current.path.replace(/[\\/][^\\/]*$/,''):''
+  const separator=current&&current.path.includes('\\')&&!current.path.includes('/')?'\\':'/'
+  input.value=folder?folder+separator+name:name
+  let overwrite=false
+  const reset=()=>{overwrite=false;note.textContent='';note.className=''}
+  reset()
+  return new Promise(resolve=>{
+    let saved=false
+    input.oninput=reset
+    document.getElementById('saveas-cancel').onclick=()=>dialog.close()
+    dialog.querySelector('form').onsubmit=async event=>{
+      event.preventDefault()
+      try{
+        const result=await api('POST','/api/export',{path:input.value,overwrite,...content})
+        if(result.exists){overwrite=true;note.textContent='This file already exists. Press Save again to replace it.';note.className='warn';return}
+        saved=true;dialog.close();notify(`Saved ${result.path}`)
+      }catch(error){note.textContent=error.message;note.className='warn'}
+    }
+    dialog.onclose=()=>resolve(saved)
+    dialog.showModal()
+    input.focus()
+    const start=input.value.length-name.length, dot=name.lastIndexOf('.')
+    input.setSelectionRange(start,dot>0?start+dot:input.value.length)
+  })
+}
+async function handle(message){
+  const {method,params={}}=message
+  if(method==='ui/initialize')return {protocolVersion:params.protocolVersion||'2026-01-26',hostInfo:{name:'CatGo viewer for Claude Code',version:'__VERSION__'},
+    hostCapabilities:{downloadFile:{},serverResources:{},updateModelContext:{},openLinks:{},experimental:{'openai/resource':{}}},
+    hostContext:{theme:dark.matches?'dark':'light',displayMode:'fullscreen',availableDisplayModes:['fullscreen']}}
+  if(method==='resources/read'&&params.uri.startsWith('catgo-assets://'))
+    return {contents:[await (await fetch('/resource?uri='+encodeURIComponent(params.uri))).json()]}
+  if(method==='resources/read'&&params.uri.startsWith('catgo-file:')){
+    const value=await api('GET','/api/file?path='+encodeURIComponent(pathOf(params.uri)))
+    return {contents:[{uri:params.uri,mimeType:'text/plain',text:value.text,_meta:{'openai/resource':{writable:value.writable,etag:value.etag}}}]}
+  }
+  if(method==='resources/subscribe'){subscribed.add(params.uri);return {}}
+  if(method==='resources/unsubscribe'){subscribed.delete(params.uri);return {}}
+  if(method==='openai/resources/write'){
+    const result=await api('POST','/api/file',{path:pathOf(params.uri),text:params.text,ifMatch:params.ifMatch})
+    if(result.outcome==='saved')notify(`Saved ${pathOf(params.uri)}`)
+    return result
+  }
+  if(method==='ui/update-model-context'){
+    await api('POST','/api/context',{file:current,params})
+    notify('Selection sent. Ask Claude to read the CatGo selection.')
+    return {}
+  }
+  if(method==='ui/download-file'){
+    for(const item of params.contents||[]){
+      const resource=item.resource||{}
+      const name=decodeURIComponent((resource.uri||'').split('/').pop()||current?.name||'export.txt')
+      const content='blob' in resource?{blob:resource.blob}:{text:resource.text??''}
+      if(await saveWithPicker(name,content)===null)await saveWithDialog(name,content)
+    }
+    return {}
+  }
+  if(method==='ui/request-display-mode')return {mode:'fullscreen'}
+  if(method==='ui/open-link'){window.open(params.url,'_blank','noopener');return {}}
+  if(method==='ui/message')return {isError:true}
+  throw Object.assign(new Error('Unsupported host method '+method),{code:-32601})
+}
+window.addEventListener('message',async event=>{
+  if(event.source!==frame.contentWindow)return
+  const message=event.data
+  if(!message||message.jsonrpc!=='2.0')return
+  if(message.method==='ui/notifications/initialized'){ready=true;if(current)show(current);return}
+  if(!('id' in message)||!message.method)return
+  try{send({id:message.id,result:await handle(message)})}
+  catch(error){send({id:message.id,error:{code:error.code||-32603,message:error.message}});if(message.method!=='ui/initialize')notify(error.message)}
+})
+dark.addEventListener('change',()=>send({method:'ui/notifications/host-context-changed',params:{theme:dark.matches?'dark':'light'}}))
+let serial=0
+function connect(){
+  const events=new EventSource('/api/events?token='+encodeURIComponent(token))
+  events.addEventListener('hello',event=>{
+    dot.classList.add('on');dot.title='Connected'
+    const {current:file}=JSON.parse(event.data)
+    if(file&&file.uri!==current?.uri)show({...file,serial:++serial})
+  })
+  events.addEventListener('load',event=>show({...JSON.parse(event.data),serial:++serial}))
+  events.addEventListener('changed',event=>{
+    const {uri}=JSON.parse(event.data)
+    if(subscribed.has(uri))send({method:'notifications/resources/updated',params:{uri}})
+  })
+  events.onerror=()=>{dot.classList.remove('on');dot.title='Disconnected: ask Claude to view a structure, then open the link it gives.'}
+}
+if(token)connect();else notify('Open the CatGo link that Claude gives you; this address lacks its access token.')
+// The Browser pane blocks subframe requests, so the editor arrives as srcdoc.
+fetch('/editor').then(response=>response.text()).then(html=>{frame.srcdoc=html}).catch(error=>notify('CatGo could not load: '+error.message))
+document.getElementById('open').addEventListener('submit',async event=>{
+  event.preventDefault()
+  try{await api('POST','/api/open',{path:pathInput.value})}
+  catch(error){notify(error.message)}
+})
+</script>
+</body>
+</html>

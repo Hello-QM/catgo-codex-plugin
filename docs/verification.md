@@ -1,5 +1,10 @@
 # Verification scope
 
+Version **0.2.15** adds a check that Import / Export → **More formats…** opens
+CatGo's export-only pane and that its CIF download, under the native Blob
+contract, reparses with the edited coordinates. The Claude Code viewer has its
+own tests in `plugins/catgo-editor/tests/test_claude_server.py`.
+
 Version **0.2.14** adds host-download and toolbar regressions. Actual browser
 downloads are saved and reparsed, covering native Blob, standard MCP contents
 and an advertised-capability/legacy-schema combination. Tests exercise the

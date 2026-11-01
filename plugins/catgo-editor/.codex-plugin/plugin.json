@@ -1,6 +1,6 @@
 {
   "name": "catgo-editor",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "A CatGo structure file editor with host-managed reads and version-checked saves.",
   "author": {
     "name": "CatGo"

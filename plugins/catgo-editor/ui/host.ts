@@ -47,11 +47,40 @@ export function connectHost(connection = getHostConnection()) {
   })
 }
 
+async function base64(blob: Blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let binary = ''
+  for (let start = 0; start < bytes.length; start += 0x8000) binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000))
+  return btoa(binary)
+}
+
+// Codex currently receives structured-cloned {blob,name} without the newer
+// capability declaration. Other MCP hosts use embedded contents. A direct
+// anchor inside the app sandbox can silently lose the download.
+async function hostDownload(app: App, name: string, data: string | Blob, type = '') {
+  const nativeDownload = () => app.downloadFile({name,blob:typeof data === 'string' ? new Blob([data],{type:type || 'text/plain;charset=utf-8'}) : data} as unknown as Parameters<App['downloadFile']>[0])
+  let result
+  if (app.getHostCapabilities()?.downloadFile) {
+    const uri = `catgo-export:///${encodeURIComponent(name)}`
+    const resource = typeof data === 'string' ? {uri, mimeType:type || 'text/plain', text:data}
+      : {uri, mimeType:data.type || type || 'application/octet-stream', blob:await base64(data)}
+    try { result = await app.downloadFile({contents:[{type:'resource',resource}]}) }
+    catch (cause) {
+      // Retry only an argument-schema mismatch, never a denial/cancel.
+      if ((cause as {code?:number}).code !== -32602) throw cause
+      result = await nativeDownload()
+    }
+  } else result = await nativeDownload()
+  if (result.isError) throw new Error('The export was cancelled or refused by the host. Your edits are preserved.')
+}
+
 export function createHost(onFile: (file: FileRef) => void, onChange: (uri: string) => void) {
   const connection = getHostConnection()
   const {app, extensions} = connection
   connection.onFile = onFile
   connection.onChange = onChange
+  // CatGo's download() defers to this global, so Import/Export pane files reach the host.
+  ;(globalThis as {download?: unknown}).download = (data: string | Blob, filename: string, type: string) => hostDownload(app, filename, data, type)
   const bridge: FileBridge = {
     async read(uri): Promise<ResourceValue> {
       if (!extensions.resources) throw new Error('This host does not provide the file-resource interface required by the editor.')
@@ -74,22 +103,7 @@ export function createHost(onFile: (file: FileRef) => void, onChange: (uri: stri
     },
     async subscribe(uri: string) { await extensions.resources?.subscribe({uri}) },
     async unsubscribe(uri: string) { await extensions.resources?.unsubscribe({uri}) },
-    async exportCopy(name: string, text: string) {
-      // Codex currently receives structured-cloned {blob,name} without the
-      // newer capability declaration. Other MCP hosts use embedded contents.
-      // A direct anchor inside the app sandbox can silently lose the download.
-      const nativeDownload = () => app.downloadFile({name,blob:new Blob([text],{type:'text/plain;charset=utf-8'})} as unknown as Parameters<App['downloadFile']>[0])
-      let result
-      if (app.getHostCapabilities()?.downloadFile) {
-        try { result = await app.downloadFile({contents:[{type:'resource',resource:{uri:`catgo-export:///${encodeURIComponent(name)}`,mimeType:'text/plain',text}}]}) }
-        catch (cause) {
-          // Retry only an argument-schema mismatch, never a denial/cancel.
-          if ((cause as {code?:number}).code !== -32602) throw cause
-          result = await nativeDownload()
-        }
-      } else result = await nativeDownload()
-      if (result.isError) throw new Error('The export was cancelled or refused by the host. Your edits are preserved.')
-    },
+    async exportCopy(name: string, text: string) { await hostDownload(app, name, text) },
     async context(file: FileRef, structure: {sites: {species: {element: string}[]; xyz: number[]}[]}, selected: number[]) {
       const atoms = selected.slice(0, 50).map(index => ({index: index + 1, element: structure.sites[index].species[0].element, xyz: structure.sites[index].xyz}))
       await app.updateModelContext({content: [{type: 'text', text: `CatGo editor: ${file.name}, ${structure.sites.length} atoms; selected atoms: ${JSON.stringify(atoms)}`}], structuredContent: {filename: file.name, atomCount: structure.sites.length, selectedAtoms: atoms}})

@@ -25,6 +25,6 @@ export function adaptFileToolbar(source) {
   source=replaceOne(source,"{webgpu_available ? t('structure.large_system_mode') : t('structure.large_system_mode_unavailable')}",
     '{webgpu_available ? t(\'structure.large_system_mode\') : "Faster rendering — reduce drawing resolution; click again to restore it"}','performance description')
   source=replaceOne(source,'          onclick={() => { io_pane_open = !io_pane_open }}',
-    '          aria-label="Import / Export"\n          onclick={(event) => event.currentTarget.dispatchEvent(new CustomEvent("catgo-editor-file-actions", {bubbles:true}))}','file actions')
+    '          aria-label="Import / Export"\n          onclick={(event) => event.currentTarget.dispatchEvent(new CustomEvent("catgo-editor-file-actions", {bubbles:true,detail:{openPane:() => { io_pane_open = true }}}))}','file actions')
   return source
 }

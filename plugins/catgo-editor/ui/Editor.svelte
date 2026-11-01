@@ -17,6 +17,7 @@
   let exportName = $state('')
   let exportNotice = $state('')
   let exporting = $state(false)
+  let openExportPane = $state<() => void>()
   let coordinateAtomId = $state<number>()
   let coordinates = $state<(string | number)[]>(['0', '0', '0'])
   type OpenRequest = {kind:'host';file:FileRef;value?:ResourceValue} | {kind:'import';file:FileRef;value:ResourceValue}
@@ -248,7 +249,9 @@
     const stem = (state.file?.name ?? 'structure').replace(/\.(poscar|vasp|cif|xyz|extxyz)$/i,'')
     return `${stem}-export.${format === 'xyz' ? 'extxyz' : format}`
   }
-  function toggleFileActions() {
+  function toggleFileActions(event: Event) {
+    // The toolbar passes its opener for CatGo's own export pane.
+    openExportPane = (event as CustomEvent<{openPane?: () => void}>).detail?.openPane
     if (!fileActionsOpen && state.file) {
       exportFormat = fileFormat(state.file.name)
       exportName = defaultExportName(exportFormat)
@@ -360,6 +363,7 @@
         <button onclick={() => void exportFile(exportFormat,exportName)} disabled={exporting}>Export file</button>
       </div>
       <p>{exportFormat === 'cif' ? 'CIF retains geometry and cell. Use POSCAR or Extended XYZ to retain fixed/free atom constraints.' : 'Exports the current coordinates, cell and fixed/free atom constraints to a separate copy.'}</p>
+      {#if openExportPane}<p>Other structure formats, calculation inputs and images: <button onclick={() => { fileActionsOpen = false; openExportPane?.() }}>More formats…</button></p>{/if}
     </section>
   {/if}
   <main bind:this={viewerElement}>
@@ -383,7 +387,7 @@
 
 <style>
   :global(html), :global(body), :global(#app) { height:100%; margin:0; width:100%; overflow:hidden }
-  :global(body) { font:13px system-ui,sans-serif; background:var(--color-background-primary,#f6f7f8); color:var(--color-text-primary,#18212d) }
+  :global(body) { font:13px system-ui,sans-serif; background:var(--color-background-primary,var(--page-bg,#f6f7f8)); color:var(--color-text-primary,var(--text-color,#18212d)) }
   :global(*) { box-sizing:border-box }
   .editor-shell { height:100%; display:flex; flex-direction:column; min-width:0; position:relative }
   .file-picker { display:none }
@@ -391,7 +395,7 @@
   header { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid #94a3b833 }
   header strong { overflow:hidden; text-overflow:ellipsis; max-width:100% }
   .actions { display:flex; gap:6px; flex-wrap:wrap; margin-left:auto }
-  button { border:1px solid #94a3b84d; border-radius:6px; padding:5px 9px; color:inherit; background:var(--color-background-primary,#fff); cursor:pointer; font:inherit }
+  button { border:1px solid #94a3b84d; border-radius:6px; padding:5px 9px; color:inherit; background:var(--color-background-primary,var(--page-bg,#fff)); cursor:pointer; font:inherit }
   button:hover:enabled { border-color:#64748b } button:disabled { opacity:.4; cursor:default }
   button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #3b82f6; outline-offset:2px }
   main { flex:1; position:relative; min-height:0; overflow:hidden }
@@ -408,7 +412,7 @@
   .export-fields input { width:240px; max-width:100% }
   .coordinates { display:flex; align-items:end; gap:8px; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid #94a3b833 }
   label { display:flex; flex-direction:column; gap:4px; font-size:12px }
-  input { width:92px } input,select { padding:5px; border:1px solid #94a3b84d; border-radius:4px; background:var(--color-background-primary,#fff); color:inherit }
+  input { width:92px } input,select { padding:5px; border:1px solid #94a3b84d; border-radius:4px; background:var(--color-background-primary,var(--page-bg,#fff)); color:inherit }
   :global(.structure) { --struct-width:100%; --struct-height:100%; --struct-min-width:0; --struct-max-width:none; --struct-border-radius:0 }
   :global(.pencil-mode-container) { position:static !important }
   :global(.pencil-mode-selector) { max-width:calc(100% - 8px) }

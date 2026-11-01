@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.2.15 — 2026-10-31
+
+- Import / Export's file actions gain **More formats…**, which opens CatGo's
+  own export pane: structure formats, figures (PNG, GLB/OBJ) and the QE, VASP,
+  LAMMPS, CP2K, Gaussian, GROMACS, ORCA, ABACUS, AMBER and SPARK input
+  generators. The build had replaced that pane with an empty component. It is
+  export-only here: imports stay with the editor's file actions, which keep
+  unsaved edits, and OPTIMADE search needs network access the sandbox denies.
+  `IOPane.svelte` is vendored from CatGo `d6f3e1b0` and recorded in `SOURCE.json`.
+- Route every CatGo download, binary images included, through the same host
+  download as Export via CatGo's `globalThis.download` hook.
+- Replace the export preview's Monaco editor, which arrived without its
+  stylesheet and rendered unreadable, with a themed editable textarea. Monaco
+  leaves the bundle (program 8.0 MiB).
+- Add Claude Code support from the same package: `.claude-plugin/plugin.json`
+  and a root `.claude-plugin/marketplace.json`. `claude_server.py` provides the
+  `view_structure`, `open_viewer` and `get_viewer_selection` MCP tools and a
+  loopback page that hosts the unchanged prebuilt editor, for the Claude desktop
+  Browser pane or any browser. The page answers the editor's host protocol from
+  local files: version-checked Save, external-change reloads, Export beside the
+  open file and Send selection. Its API requires a per-host token kept in a
+  user-only state file and accepts only structure files.
+- Claude Code also reads the Codex `.mcp.json`; the Claude manifest declares the
+  same server name so its entry replaces the Codex one.
+- A session started before an upgrade keeps a newer running viewer instead of
+  restarting it, so sessions on different versions do not fight over the port.
+- Apply CatGo's light/dark theme inside the editor (both hosts). CatGo's
+  components read its theme variables, which nothing defined, so the pencil
+  palette, Build Tools and other panes fell back to dark colours on light pages.
+  The editor now loads CatGo's `themes.js` (vendored from `d6f3e1b0`) and calls
+  `apply_theme_to_dom` for the host's light/dark choice; the editor shell keeps
+  the host's style variables and falls back to CatGo's page and text colours.
+- In the Claude viewer, Export and every download open the system Save dialog
+  (`showSaveFilePicker`, the desktop portal's file chooser in the Claude app).
+  Where a browser has no such dialog, the page asks for a path, starting in the
+  open file's folder, and replaces an existing file only after confirmation.
+
 ## 0.2.14 — 2026-10-30
 
 - Carry forward the host-mediated Export, Import / Export, extXYZ movement-mask

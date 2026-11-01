@@ -138,6 +138,21 @@ try{
   await pane.getByRole('button',{name:'Close Import / Export',exact:true}).click()
   await pane.waitFor({state:'hidden'})
   passed.push('toolbar opens/closes, converts CIF/extXYZ, preserves periodic constraints and rejects invalid copy names')
+  await editor.locator('.struct-toolbar-tooltip-wrap').filter({hasText:'Import / Export'}).getByRole('button').click()
+  await pane.getByRole('button',{name:'More formats…',exact:true}).click()
+  await pane.waitFor({state:'hidden'})
+  const exportPane=editor.locator('.io-pane')
+  await exportPane.waitFor({timeout:5000})
+  // Imports belong to the guarded file actions above, not CatGo's own pane.
+  assert.equal(await exportPane.getByRole('button',{name:/^(Import|Open File|Paste Content)$/}).count(),0)
+  const catgoFile=await downloadAfterClick(exportPane.locator('.export-item',{hasText:/^CIF/}).getByTitle('Download',{exact:true}))
+  const catgoPath=resolve(evidence,'catgo-pane-export.cif');await catgoFile.saveAs(catgoPath)
+  const catgoParsed=parseDocument(await readFile(catgoPath,'utf8'),'copy.cif')
+  assert.equal(catgoParsed.sites.length,2);assert.ok(Math.abs(catgoParsed.sites[0].xyz[0]-1.25)<1e-6)
+  assert.equal(await page.evaluate(()=>window.testRecord.writes.length),0)
+  await exportPane.getByRole('button',{name:'Close pane',exact:true}).click()
+  await exportPane.waitFor({state:'hidden'})
+  passed.push('More formats opens CatGo\'s export-only pane, whose downloads use the same host contract')
  }
  if(mode==='baseline-performance'||mode==='large-performance'||mode==='all'){
   const button=editor.locator('.struct-toolbar-tooltip-wrap').filter({has:editor.locator('svg')}).filter({hasText:/[Ll]arge-system|[Ff]aster rendering/}).getByRole('button')

@@ -102,6 +102,8 @@ try {
  await editor.getByRole('button',{name:'Edit atom coordinates',exact:true}).waitFor({timeout:30000})
  assert.equal(await page.evaluate(()=>window.testRecord.programReads.length),manifest.chunks.length)
  assert.equal(await page.evaluate(()=>window.testRecord.events.filter(method=>method==='ui/initialize').length),1)
+ // CatGo components read its theme table's variables for the host's light/dark choice.
+ assert.equal(await editor.locator('html').evaluate(root=>[root.dataset.theme,getComputedStyle(root).getPropertyValue('--surface-bg').trim()].join('|')),'light|rgb(237, 238, 239)')
  let pixels={width:0,height:0,colorCount:0}
  if(process.env.CATGO_EDITOR_TEST_NO_GPU){
   await editor.getByRole('alert').filter({hasText:'Error creating WebGL context'}).waitFor()
